@@ -16,7 +16,11 @@ jest.mock('@/lib/catalog/loadBundledCatalog', () => ({
     },
   ],
 }));
+jest.mock('expo-router', () => ({ useRouter: () => ({}) }));
+jest.mock('react-native-vision-camera', () => ({ VisionCamera: {} }));
+jest.mock('expo-image-picker', () => ({}));
 
+import IndexRoute from '@app/index';
 import SearchScreen from '@/screens/SearchScreen';
 
 const metrics = {
@@ -25,6 +29,10 @@ const metrics = {
 };
 
 describe('SearchScreen', () => {
+  it('is the index route', () => {
+    expect(IndexRoute).toBe(SearchScreen);
+  });
+
   it('lists the whiskeys from the bundled catalog loader', () => {
     render(
       <SafeAreaProvider initialMetrics={metrics}>

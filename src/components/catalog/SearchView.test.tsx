@@ -1,9 +1,18 @@
-import { fireEvent, render, screen, within } from '@testing-library/react-native';
-import { FlatList, Image } from 'react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
+import { ActionSheetIOS, FlatList, Image } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() };
+jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
+jest.mock('react-native-vision-camera', () => ({ VisionCamera: {} }));
+jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: jest.fn() }));
+
+import * as ImagePicker from 'expo-image-picker';
 
 import { SearchView } from '@/components/catalog/SearchView';
 import type { BundledWhiskey } from '@/lib/catalog/loadBundledCatalog';
+
+const showActionSheet = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation(() => {});
 
 const whiskey = (id: string, name: string, category: string, imageSource?: number): BundledWhiskey => ({
   id,
@@ -101,13 +110,25 @@ describe('SearchView', () => {
     expect(screen.getByText('Sazerac Rye')).toBeTruthy();
   });
 
-  it('shows the Scan bottle row without a press target', () => {
+  it('opens the scan sheet from the Scan bottle row, and Upload Picture pushes Scan Bottle', async () => {
+    jest.mocked(ImagePicker.launchImageLibraryAsync).mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: 'file:///library/a.jpg', width: 1, height: 1 }],
+    });
     renderSearch([buffalo]);
 
-    expect(screen.getByText('Scan bottle')).toBeTruthy();
     expect(screen.getAllByRole('button').map((button) => button.props.accessibilityLabel)).toEqual([
       'Clear search',
+      'Scan bottle',
     ]);
+    expect(screen.queryByText('Scan bottle')).toBeNull();
+    expect(screen.getByText('Scan bottle', { includeHiddenElements: true })).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Scan bottle' }));
+    const [sheet, onChoice] = showActionSheet.mock.calls[0];
+    expect(sheet.title).toBe('Scan bottle');
+
+    await act(async () => onChoice(1));
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/scan', params: { photoUri: 'file:///library/a.jpg' } });
   });
 
   it('still shows the name and category when the image is missing', () => {

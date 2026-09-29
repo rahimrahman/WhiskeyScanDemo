@@ -12,10 +12,14 @@
     "newArchEnabled": true,
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "app.whiskeysocial.demo"
+      "bundleIdentifier": "app.whiskeysocial.demo",
+      "infoPlist": {
+        "NSCameraUsageDescription": "$(PRODUCT_NAME) uses the camera to photograph a bottle label."
+      }
     },
     "android": {
       "package": "app.whiskeysocial.demo",
+      "permissions": ["android.permission.CAMERA"],
       "adaptiveIcon": {
         "backgroundColor": "#1A2334",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -32,6 +36,13 @@
           "backgroundColor": "#1A2334",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "$(PRODUCT_NAME) opens your photos so you can upload a picture of a bottle label.",
+          "microphonePermission": false
         }
       ]
     ],

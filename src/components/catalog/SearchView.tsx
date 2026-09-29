@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FlatList, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useScanSheet } from '@/components/scan/useScanSheet';
 import type { BundledWhiskey } from '@/lib/catalog/loadBundledCatalog';
 import { cn } from '@/ui-components/cn';
 import { Icon } from '@/ui-components/Icon';
@@ -14,11 +15,12 @@ const ACTIVE_TAB = 'Whiskeys';
 
 export type SearchViewProps = { loadCatalog: () => BundledWhiskey[] };
 
-/** Catalog list under visual-only search chrome: nothing here filters, switches tabs, or navigates. */
+/** Catalog list under visual-only search chrome: nothing filters or switches tabs; Scan bottle opens the photo sheet. */
 export function SearchView({ loadCatalog }: SearchViewProps) {
   const [whiskeys] = useState(loadCatalog);
   const [query, setQuery] = useState('');
   const insets = useSafeAreaInsets();
+  const openScanSheet = useScanSheet('search');
   const categories = [...new Set(whiskeys.map((whiskey) => whiskey.category))];
 
   return (
@@ -63,7 +65,15 @@ export function SearchView({ loadCatalog }: SearchViewProps) {
 
       <View className="flex-row items-center gap-2 px-4 pt-4">
         <Icon name="camera" size={20} />
-        <Text className="text-sm text-whiskey-textSecondary">Scan bottle</Text>
+        <Text aria-hidden className="text-sm text-whiskey-textSecondary">
+          Scan bottle
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Scan bottle"
+          onPress={openScanSheet}
+          className="absolute inset-0"
+        />
       </View>
 
       <ScrollView
