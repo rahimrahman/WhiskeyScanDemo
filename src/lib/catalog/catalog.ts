@@ -223,6 +223,14 @@ export function jpegSize(bytes: Uint8Array): ImageSize {
   throw new Error('JPEG size not found');
 }
 
+/** Source of `assets/catalog/image-map.js`; Metro only bundles images named in a literal `require`. */
+export function imageRequireMap(targets: string[]): string {
+  const entries = targets.map(
+    (target) => `  ${JSON.stringify(target)}: require(${JSON.stringify(`./${target}`)}),\n`,
+  );
+  return `module.exports = {\n${entries.join('')}};\n`;
+}
+
 /** True when the long edge is above `MAX_LONG_EDGE`; smaller JPEGs are copied byte for byte. */
 export function needsShrink({ width, height }: ImageSize): boolean {
   return Math.max(width, height) > MAX_LONG_EDGE;

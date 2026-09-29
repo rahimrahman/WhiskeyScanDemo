@@ -4,6 +4,7 @@ import sharp from 'sharp';
 
 import {
   MAX_LONG_EDGE,
+  imageRequireMap,
   jpegSize,
   needsShrink,
   planCatalog,
@@ -64,6 +65,10 @@ async function main() {
     await fs.writeFile(
       path.join(buildDir, 'catalog.json'),
       `${JSON.stringify(plan.catalog, null, 2)}\n`,
+    );
+    await fs.writeFile(
+      path.join(buildDir, 'image-map.js'),
+      imageRequireMap(plan.photos.map((photo) => photo.target)),
     );
     await replaceCatalog(buildDir);
   } finally {

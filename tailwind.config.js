@@ -17,6 +17,12 @@ module.exports = {
           alert: '#E5484D',
         },
       },
+      /** Names registered with expo-font in app/_layout.tsx. */
+      fontFamily: {
+        display: ['EBGaramond_500Medium'],
+        body: ['Poppins_400Regular'],
+        'body-semibold': ['Poppins_600SemiBold'],
+      },
     },
   },
 };

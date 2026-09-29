@@ -3,6 +3,7 @@ import { join } from 'path';
 
 import {
   CatalogError,
+  imageRequireMap,
   jpegSize,
   needsShrink,
   parseCsv,
@@ -253,5 +254,26 @@ describe('jpegSize and needsShrink', () => {
   it('rejects non-JPEG bytes and JPEGs without a frame header', () => {
     expect(() => jpegSize(Uint8Array.from([0x89, 0x50, 0x4e, 0x47]))).toThrow('not a JPEG');
     expect(() => jpegSize(Uint8Array.from([0xff, 0xd8, 0xff, 0xd9]))).toThrow('JPEG size not found');
+  });
+});
+
+describe('imageRequireMap', () => {
+  it('keys a literal require by each photo target, relative to assets/catalog', () => {
+    expect(imageRequireMap(['photos/1/1-front.jpg', 'photos/1/2-back.jpg'])).toBe(
+      [
+        'module.exports = {',
+        '  "photos/1/1-front.jpg": require("./photos/1/1-front.jpg"),',
+        '  "photos/1/2-back.jpg": require("./photos/1/2-back.jpg"),',
+        '};',
+        '',
+      ].join('\n'),
+    );
+  });
+
+  it('escapes quotes in file names and writes an empty map for no photos', () => {
+    expect(imageRequireMap(['photos/3/"odd".jpg'])).toContain(
+      '"photos/3/\\"odd\\".jpg": require("./photos/3/\\"odd\\".jpg")',
+    );
+    expect(imageRequireMap([])).toBe('module.exports = {\n};\n');
   });
 });
