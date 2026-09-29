@@ -1,0 +1,34 @@
+---
+description: Prefer NativeWind className over React Native style; use style only when unavoidable
+alwaysApply: true
+---
+
+# Minimize `style` — NativeWind first
+
+This app uses **NativeWind** (`className`). Prefer utilities for layout, spacing, typography, and brand colors from `tailwind.config.js` (`bg-whiskey-bg`, `bg-whiskey-surface`, `text-whiskey-accent`, `text-whiskey-textSecondary`, `border-whiskey-accent`, etc.).
+
+## Do not use `style` for
+
+- Font size, weight, family — use `text-*` and `Text` variants
+- Padding, margin, flex — use Tailwind utilities
+- Static colors — use the `whiskey-*` tokens
+
+## `style` is acceptable only for
+
+- **Measurements**: `onLayout` results, image aspect ratios, and other runtime sizes not covered by utilities
+- **Animated values**: Reanimated / animated styles
+
+## Examples
+
+```tsx
+// Prefer
+<Text className="text-xs text-whiskey-textSecondary">Label</Text>
+
+// Avoid duplicating what utilities already encode
+<Text className="text-xs" style={{ fontSize: 12 }} /> // redundant
+
+// OK — height comes from a measurement
+<View className="bg-whiskey-surface" style={{ height: measuredHeight }} />
+```
+
+When adding `style`, add a **short comment** only if the reason is non-obvious.

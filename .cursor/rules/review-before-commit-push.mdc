@@ -1,0 +1,39 @@
+---
+description: No git commit, push, or PR merge without an explicit ask; major changes defined below
+alwaysApply: true
+---
+
+# Review gate — commit, push, merge
+
+## Default
+
+Do **not** run `git commit`, `git push`, or `gh pr merge` unless the user **explicitly** asks (e.g. “commit”, “push”, “commit and push”, “open a PR”, “merge PR #12”). Summarize what changed and **stop in the working tree** for them to review.
+
+## Major changes — always wait for explicit approval
+
+Treat as **major** (no commit/push until the user says so), even if the thread sounded like “go ahead” on the feature:
+
+- **Dependencies / platform**: `package.json`, `package-lock.json`, `app.json`, `eas.json`, `android/**`, `ios/**`, native modules under `modules/**`.
+- **CI**: `.github/**`.
+- **Broad product behavior**: new screens, new hooks or modules wired into navigation, multi-file refactors, or anything you’d expect in a **non-trivial PR**.
+
+After implementation: give a short recap, list files touched, and remind them they can **commit / push when ready**.
+
+## Simple changes — still no surprise push
+
+**Simple** means low blast radius, usually one or a few lines in obvious places, for example:
+
+- Copy / wording / labels only (no logic change).
+- Typos, comments, or renaming that doesn’t change exports or APIs.
+- Purely test updates **when** production source is unchanged.
+- Formatting or lint fixes **limited to files already in scope** for the request.
+
+For simple work: you **may** `git commit` **if** the user clearly asked you to apply the fix and finish it (e.g. “change the button label to X”). Still **do not** `git push` unless they explicitly ask to push or open a PR.
+
+## Pull request merge — explicit only
+
+**Never** run `gh pr merge` unless the user **explicitly** requests merge of that PR in the **same thread**. Phrases like “land the work” or “ship it” or green checks are **not** merge approval. Report readiness and stop.
+
+## Conflict with other rules
+
+If another rule reads like “push after a task,” **this rule wins** for **major** work unless the user has explicitly approved commit/push in the same thread.

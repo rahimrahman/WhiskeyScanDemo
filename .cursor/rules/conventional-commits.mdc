@@ -1,0 +1,63 @@
+---
+description: Use Conventional Commits for commit messages and PR titles in this repo
+alwaysApply: true
+---
+
+# Conventional Commits
+
+Follow **[Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)** when authoring **commit messages** and **pull request titles** (including messages proposed before `git commit` or `gh pr create`).
+
+## Subject line (required)
+
+```
+<type>[optional scope]: <short description>
+```
+
+- **type** (common): `feat` | `fix` | `docs` | `style` | `refactor` | `perf` | `test` | `build` | `ci` | `chore`
+- **scope** (optional): area touched—e.g. `scan`, `catalog`, `search`, `ui`, `ci`, `deps`
+- **description**: imperative mood (“add”, not “added”); no trailing period in the subject line; aim for ~72 characters or less.
+
+### Breaking changes
+
+- Append `!` after the type/scope: `feat(catalog)!: change embedding table layout`
+- Or put `BREAKING CHANGE:` in the **footer** (after a blank line below the body).
+
+## Body (optional)
+
+- Blank line after the subject.
+- Explain *what* and *why*, not paste-only diffs.
+- Wrap at ~72 chars for readability.
+
+## Footer (optional)
+
+- Issue references: `Closes #123`
+- Co-authorship only when accurate.
+
+## Examples for this codebase
+
+```text
+feat(scan): add vector match result screen
+
+feat(catalog): build bundled catalog from CSV
+
+fix(scan): gate low-confidence matches as best guesses
+
+ci: run lint, typecheck, and tests on pull requests
+
+chore(deps): bump expo-router
+```
+
+## Pull request titles (required)
+
+Use the **same subject format** as commits:
+
+```text
+<type>[optional scope]: <short description>
+```
+
+- Put story id and context in the **PR description**, not the title.
+- Prefer the same type/scope as the branch and primary commit when the PR is a single feature.
+
+## Agent behavior
+
+When preparing a commit or **`gh pr create --title`** for this project, **default to this format** unless the user specifies otherwise.

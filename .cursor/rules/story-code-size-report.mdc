@@ -1,0 +1,52 @@
+---
+description: When wrapping a story or PR, report production code size (ts/tsx/swift/kt) vs origin/main, not docs or tests
+alwaysApply: true
+---
+
+# Story — production code size report
+
+When wrapping a story (and in the PR body), tell the operator whether the change is **Small / Medium / Large** using **production code only**, measured against `origin/main`.
+
+Do not treat markdown, Cursor rules, BMad artifacts, or other docs as “the PR size.”
+
+## What counts as production code
+
+**Include:** `*.ts`, `*.tsx`, `*.swift`, `*.kt`
+
+**Exclude**
+
+- `*.md`, `*.mdc`, `docs/**`
+- Tests: `*.test.ts`, `*.test.tsx`, `*.spec.ts`, `*.spec.tsx`, `**/__tests__/**`
+- Lockfiles, JSON/YAML config, shell scripts
+
+If you have a useful test delta, show it on a **second line** labeled **Tests** — never mix it into the production totals.
+
+## How to measure
+
+```bash
+BASE="${BASE:-origin/main}"
+PROD=('*.ts' '*.tsx' '*.swift' '*.kt' \
+  ':!**/*.test.ts' ':!**/*.test.tsx' ':!**/*.spec.ts' ':!**/*.spec.tsx' \
+  ':!**/__tests__/**' ':!docs/**')
+
+git diff --diff-filter=A --name-only "$BASE"...HEAD -- "${PROD[@]}"
+git diff --diff-filter=M --name-only "$BASE"...HEAD -- "${PROD[@]}"
+git diff --numstat "$BASE"...HEAD -- "${PROD[@]}"
+```
+
+- **Files** = added + changed (count renames too, and say “renamed” if non-zero)
+- **Churn** = sum of numstat insertions + deletions. Skip binary rows (`-`).
+
+## Size band (first match wins)
+
+1. **Small** — files **≤ 8** **and** churn **≤ 200**
+2. **Medium** — else if files **≤ 20** **and** churn **≤ 600**
+3. **Large** — everything else
+
+## What to print
+
+Lead with the band, then counts. Example:
+
+**PR size (prod):** Medium — 11 files (3 added, 8 changed), +280 / −95 (churn 375). Tests: 4 files, +120 / −10. Docs omitted.
+
+Put the same one-liner in the **PR body** under Summary.

@@ -1,0 +1,45 @@
+---
+description: Compose new UI from existing ui-components and shared feature widgets; do not fork the same control across screens
+alwaysApply: true
+---
+
+# Compose UI — reuse before inventing
+
+When adding or extending screens, **compose** from existing primitives and shared widgets. Do not rebuild the same card, pill, or chrome in a second screen.
+
+Folder roles: [screen-component-layers.mdc](screen-component-layers.mdc).
+
+## Before writing markup
+
+1. **Host screen first.** List sibling rows/cards on the screen that will show the control. Match **that** family.
+2. Check **`src/ui-components/`** for a primitive.
+3. Search **`src/components/<feature>/`** for an existing widget for this control.
+4. If the same control is (or will be) on **two or more screens**, extract a shared widget **before** copying.
+
+## Planned shared widgets
+
+- **`WhiskeyCard`** — one card for both the Search result list and the Scan Bottle candidates.
+- **`Pill`** — one outlined pill for category, similarity percentage, and “Best guess”.
+
+Two screens, one component, two thin hosts.
+
+## Where it lives
+
+| Kind | Put it in |
+| --- | --- |
+| Generic look (no feature copy, no data) | `@/ui-components/*` |
+| Feature-specific but reused | `@/components/<feature>/`, composed from ui-components |
+| One-screen chrome | The view — still use primitives |
+
+Do **not** put scan/catalog copy or data access in `ui-components/`.
+
+## Tests
+
+- Behavior (labels, a11y, disabled states) lives on the **shared widget**.
+- Screen tests only prove **wiring** (widget mounted, callback/testID, screen-specific copy).
+- Do not copy the same test matrix onto every host screen — that is how forks drift.
+
+## Agent behavior
+
+- New typography goes through `Text` variants, not ad-hoc font classes.
+- Same user control on N screens → **one** component, **N** thin hosts.

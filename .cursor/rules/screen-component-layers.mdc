@@ -1,0 +1,38 @@
+---
+description: Keep route screens thin; put feature UI in src/components and primitives in src/ui-components
+alwaysApply: true
+---
+
+# Screen vs components vs ui-components
+
+## `app/`
+
+- Expo Router routes and layouts only. Each route file re-exports a screen: `export { default } from '@/screens/HomeScreen';`
+
+## `src/screens/`
+
+- **Only** route-level entry files: `*Screen.tsx` (default export for `app/` re-exports).
+- **Do not** add hooks, mock data, utilities, or sub-view components next to `*Screen.tsx`. Move them to `src/components/<feature>/` or `src/hooks/` when shared.
+- Screen files should be **thin**: render a single `*View` from `@/components/...`.
+
+## `src/components/`
+
+- Feature **screen bodies** (e.g. `ScanView`, `SearchView`), feature widgets, and **colocated** types/helpers for that feature.
+- Subfolders by feature: `scan/`, `catalog/` (plus `home/` for the shell).
+- May import from `@/ui-components/*`, `@/hooks/*`, `@/lib/*`, and other `@/components/...` modules.
+
+## `src/ui-components/`
+
+- **Brand primitives** reused across the app (`Text`, `Pill`, `ScreenHeader`, `cn`).
+- Must stay generic: no feature copy, no data access. ESLint blocks imports of `@/components/*` and `@/lib/*` here.
+
+## `src/lib/` and `src/hooks/`
+
+- `lib/`: non-UI logic (`db/`, `embedding/`, `matching/`, `catalog/`), pure and unit-tested where possible. `lib` never imports UI.
+- `hooks/`: shared hooks.
+
+## Imports
+
+Dependency direction: **`screens` → `components` → `ui-components`**; `components` and `hooks` may use `lib`.
+
+When **creating** UI, compose from existing primitives and shared feature widgets — do not fork the same control on a second screen. See [compose-ui-components.mdc](compose-ui-components.mdc).

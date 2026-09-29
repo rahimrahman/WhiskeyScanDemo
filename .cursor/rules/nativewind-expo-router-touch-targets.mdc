@@ -1,0 +1,35 @@
+---
+description: NativeWind + Expo Router — safe touch targets on iOS (avoid bogus navigation context errors)
+globs: "**/*.{tsx,jsx}"
+alwaysApply: false
+---
+
+# NativeWind touch targets (Expo Router / iOS)
+
+## Problem
+
+On iOS, **NativeWind `className` on `Pressable`** together with **conditionally toggled** utilities such as **`ring-*`**, **`shadow-*`**, or **opacity-slash** forms (`bg-*/*`, `border-*/*`) has triggered a runtime error:
+
+`Couldn't find a navigation context. Have you wrapped your app with 'NavigationContainer'?`
+
+Expo Router already provides navigation; the message is a **red herring** caused by styling interop during re-renders (see [nativewind#1711](https://github.com/nativewind/nativewind/issues/1711)).
+
+## Preferred patterns
+
+1. **Decoration on `View`, hit target stays minimal**  
+   Put **layout, borders, backgrounds, and conditional Tailwind** on a wrapping **`View`**. Use **`Pressable`** only as a **full-cell hit layer** with fixed classes:
+
+   `className="absolute inset-0"`
+
+   No conditional rings, shadows, or opacity-slash utilities on that `Pressable`.
+
+2. **Pass taps through stacked content**  
+   Overlay non-interactive content in a sibling **`View`** with **`pointerEvents="none"`**, so the **`Pressable`** behind receives presses.
+
+3. **Borders, not `ring-*`, for selection**  
+   Use e.g. **`border border-whiskey-accent`** on the decorative **`View`** instead of **`ring-*`**.
+
+## Agent behavior
+
+- For cards, chips, and list rows: **default to the wrapper `View` + `absolute inset-0` `Pressable` pattern** unless there is a strong reason not to.
+- Do **not** fix the navigation-context error by wrapping the app in another **`NavigationContainer`** — that is incorrect for Expo Router.
