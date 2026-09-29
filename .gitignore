@@ -40,6 +40,7 @@ coverage/
 
 # generated catalog photos
 assets/catalog/
+assets/.catalog-build-*
 
 # generated native folders
 /ios

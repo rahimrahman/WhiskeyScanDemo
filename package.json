@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck",
     "test": "jest",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "catalog": "tsx scripts/build-catalog.ts"
   },
   "dependencies": {
     "expo": "~57.0.26",
@@ -46,6 +47,8 @@
     "jest": "^29.7.0",
     "jest-expo": "~57.0.5",
     "react-test-renderer": "19.2.3",
+    "sharp": "^0.35.5",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3"
   },
   "private": true
