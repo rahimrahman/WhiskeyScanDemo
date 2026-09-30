@@ -16,6 +16,7 @@
   "dependencies": {
     "@expo-google-fonts/eb-garamond": "^0.4.3",
     "@expo-google-fonts/poppins": "^0.4.1",
+    "@insidepics/expo-apple-intelligence": "^0.2.0",
     "expo": "~57.0.26",
     "expo-constants": "~57.0.20",
     "expo-dev-client": "~57.0.19",
