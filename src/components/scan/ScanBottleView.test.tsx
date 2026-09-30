@@ -56,7 +56,7 @@ const match = (confident: boolean, candidates: MatchCandidate[]): BottleMatch =>
   winningPhoto: candidates.length > 0 ? 101 : undefined,
   elapsedMs: 412,
   modelId: 'apple-vision-feature-print:float:768',
-  label: { lines: ['Label line'], hits: [{ bottleId: '9', name: 'Label Whiskey', words: ['label'] }] },
+  label: { lines: [], hits: [] },
 });
 
 /** The label of every pill on each rendered card, category first. */
@@ -116,15 +116,56 @@ describe('ScanBottleView', () => {
     expect(screen.getByRole('button', { name: 'Retake photo' })).toBeTruthy();
   });
 
-  it('keeps the name line on the image match and lists a different label hit under How we found it', () => {
-    jest.mocked(useBottleMatch).mockReturnValue(match(true, [candidate('1', 91)]));
+  it('keeps the name on the image match and adds a label-only whiskey to the cards', () => {
+    jest.mocked(useBottleMatch).mockReturnValue({
+      ...match(true, [candidate('1', 91), candidate('2', 80), candidate('3', 74)]),
+      label: {
+        lines: ['Label line'],
+        hits: [{ bottleId: '9', name: 'Label Whiskey', words: ['label'], category: 'Scotch' }],
+      },
+    });
 
     renderScan({ photoUri: 'file:///tmp/a.jpg' });
     fireEvent.press(screen.getByRole('button', { name: 'How we found it' }));
 
     expect(screen.getByTestId('match-name')).toHaveTextContent('Whiskey 1');
-    expect(screen.UNSAFE_getAllByType(WhiskeyCard).map((card) => card.props.name)).toEqual(['Whiskey 1']);
-    expect(screen.getByText('Label Whiskey')).toBeTruthy();
+    expect(screen.UNSAFE_getAllByType(WhiskeyCard).map((card) => card.props.name)).toEqual([
+      'Whiskey 1',
+      'Whiskey 2',
+      'Label Whiskey',
+    ]);
+    expect(screen.getAllByText('Label Whiskey').length).toBeGreaterThan(0);
+  });
+
+  it('moves a whiskey both methods found to the name line', () => {
+    jest.mocked(useBottleMatch).mockReturnValue({
+      ...match(true, [candidate('1', 88), candidate('2', 78)]),
+      label: {
+        lines: ['Whiskey 2'],
+        hits: [{ bottleId: '2', name: 'Whiskey 2', words: ['whiskey'], category: 'Bourbon' }],
+      },
+    });
+
+    renderScan({ photoUri: 'file:///tmp/a.jpg' });
+
+    expect(screen.getByTestId('match-name')).toHaveTextContent('Whiskey 2');
+    expect(screen.UNSAFE_getAllByType(WhiskeyCard).map((card) => card.props.name)).toEqual(['Whiskey 2', 'Whiskey 1']);
+  });
+
+  it('names the whiskey both methods found instead of saying Not found', () => {
+    jest.mocked(useBottleMatch).mockReturnValue({
+      ...match(false, [candidate('1', 66), candidate('2', 60)]),
+      label: {
+        lines: ['Whiskey 2'],
+        hits: [{ bottleId: '2', name: 'Whiskey 2', words: ['whiskey'], category: 'Bourbon' }],
+      },
+    });
+
+    renderScan({ photoUri: 'file:///tmp/a.jpg' });
+
+    expect(screen.getByTestId('match-name')).toHaveTextContent('Whiskey 2');
+    expect(screen.queryByText('Not found')).toBeNull();
+    expect(cardPills()[0]).toEqual(['Bourbon', '60%', 'Best guess']);
   });
 
   it('says Not found and marks every card Best guess with a muted percentage', () => {

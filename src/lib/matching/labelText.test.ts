@@ -1,4 +1,4 @@
-import { labelQuery, labelTokens, matchedWords } from './labelText';
+import { closeSpellings, labelQuery, labelTokens, matchedWords } from './labelText';
 
 describe('labelTokens', () => {
   it("keeps the apostrophe and drops the generic words of a Maker's Mark label", () => {
@@ -30,6 +30,22 @@ describe('labelTokens', () => {
 describe('labelQuery', () => {
   it('quotes each token and joins them with OR', () => {
     expect(labelQuery(["maker's", 'mark'])).toBe('"maker\'s" OR "mark"');
+  });
+});
+
+describe('closeSpellings', () => {
+  const laphroaig = ['Laphroaig 10 Year Old', 'Laphroaig (Beam Suntory)', '10 Year Old Single Malt', '10 years'];
+
+  it('queries the catalog spelling when OCR drops one letter of a long name', () => {
+    expect(closeSpellings(['aphroaig', '10'], laphroaig)).toEqual(['aphroaig', '10', 'laphroaig']);
+  });
+
+  it('leaves short tokens exact, including ages and a one-letter miss on a short word', () => {
+    expect(closeSpellings(['10', 'rare', 'mark'], ['Eagle Rare', 'Laphroaig', "Maker's Mark"])).toEqual(['10', 'rare', 'mark']);
+  });
+
+  it('does not treat a two-letter miss as the same name', () => {
+    expect(closeSpellings(['phroaig'], laphroaig)).toEqual(['phroaig']);
   });
 });
 

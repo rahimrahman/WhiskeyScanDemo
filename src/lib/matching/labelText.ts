@@ -49,6 +49,50 @@ export function labelTokens(lines: string[]): string[] {
   return [...new Set(tokens)];
 }
 
+/** Long enough that one wrong letter is still the name, and short ages stay exact. */
+const CLOSE_SPELLING_LENGTH = 6;
+
+/** True when `left` and `right` differ by one inserted, deleted, or substituted character. */
+function withinOneEdit(left: string, right: string): boolean {
+  if (Math.abs(left.length - right.length) > 1) return false;
+  let i = 0;
+  let j = 0;
+  let edits = 0;
+  while (i < left.length && j < right.length) {
+    if (left[i] === right[j]) {
+      i += 1;
+      j += 1;
+      continue;
+    }
+    edits += 1;
+    if (edits > 1) return false;
+    if (left.length === right.length) {
+      i += 1;
+      j += 1;
+    } else if (left.length > right.length) {
+      i += 1;
+    } else {
+      j += 1;
+    }
+  }
+  if (i < left.length || j < right.length) edits += 1;
+  return edits === 1;
+}
+
+/**
+ * Adds the catalog spelling when OCR drops or swaps one letter of a long name.
+ * `APHROAIG` is not a token in `Laphroaig`, so whole-word search would miss it.
+ */
+export function closeSpellings(tokens: string[], fields: string[]): string[] {
+  const catalogWords = [...new Set(fields.flatMap(words))].filter(
+    (word) => word.length >= CLOSE_SPELLING_LENGTH && !GENERIC_WORDS.has(word),
+  );
+  const recovered = tokens.flatMap((token) =>
+    token.length < CLOSE_SPELLING_LENGTH ? [] : catalogWords.filter((word) => withinOneEdit(token, word)),
+  );
+  return [...new Set([...tokens, ...recovered])];
+}
+
 /** An FTS5 `MATCH` expression for any of `tokens`, each quoted so apostrophes and digits stay literal. */
 export function labelQuery(tokens: string[]): string {
   return tokens.map((token) => `"${token}"`).join(' OR ');

@@ -177,7 +177,7 @@ describe('useBottleMatch', () => {
     expect(result.current).toMatchObject({ confident: true, candidates: [{ bottleId: '1' }, { bottleId: '2' }] });
     expect(result.current!.label).toEqual({
       lines: ['Eagle Rare', '10 Years', 'Kentucky Straight Bourbon Whiskey'],
-      hits: [{ bottleId: '2', name: 'Eagle Rare 10 Year', words: ['eagle', 'rare', '10'] }],
+      hits: [{ bottleId: '2', name: 'Eagle Rare 10 Year', words: ['eagle', 'rare', '10'], category: 'Bourbon', cardImage: 22 }],
     });
     expect(db.store.searchLabels).toHaveBeenCalledWith('"eagle" OR "rare" OR "10"');
   });
@@ -189,6 +189,24 @@ describe('useBottleMatch', () => {
     await waitFor(() => expect(result.current).not.toBeNull());
 
     expect(db.store.searchLabels).toHaveBeenCalledWith('"maker\'s" OR "mark"');
+  });
+
+  it('searches the catalog spelling when OCR drops one letter of Laphroaig', async () => {
+    labelLines = ['APHROAIG', 'AGED 10 YEARS'];
+    labelHits = ['10'];
+    const matchDeps = deps();
+    matchDeps.loadCatalog = () => [
+      ...CATALOG,
+      whiskey('10', 'Laphroaig 10 Year Old', 33, { expression: '10 Year Old Single Malt', age: '10 years' }),
+    ];
+
+    const { result } = renderMatch(SCAN_URI, matchDeps);
+    await waitFor(() => expect(result.current).not.toBeNull());
+
+    expect(db.store.searchLabels).toHaveBeenCalledWith('"aphroaig" OR "10" OR "laphroaig"');
+    expect(result.current!.label.hits).toEqual([
+      { bottleId: '10', name: 'Laphroaig 10 Year Old', words: ['10', 'laphroaig'], category: 'Bourbon', cardImage: 33 },
+    ]);
   });
 
   it('keeps the lines and searches nothing when every word is generic or too short', async () => {
@@ -298,7 +316,7 @@ describe('useBottleMatch', () => {
     expect(result.current).toMatchObject({ confident: false, candidates: [], modelId: undefined });
     expect(result.current!.label).toEqual({
       lines: ['Eagle Rare'],
-      hits: [{ bottleId: '2', name: 'Eagle Rare 10 Year', words: ['eagle', 'rare'] }],
+      hits: [{ bottleId: '2', name: 'Eagle Rare 10 Year', words: ['eagle', 'rare'], category: 'Bourbon', cardImage: 22 }],
     });
     expect(matchDeps.openStore).toHaveBeenCalledTimes(1);
     expect(db.store.loadPhotoVectors).not.toHaveBeenCalled();

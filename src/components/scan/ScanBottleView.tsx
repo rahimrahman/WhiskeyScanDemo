@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { combineFindings } from '@/components/scan/combineFindings';
 import { MatchEvidence } from '@/components/scan/MatchEvidence';
 import { useBottleMatch } from '@/components/scan/useBottleMatch';
 import { useScanSheet } from '@/components/scan/useScanSheet';
@@ -9,15 +10,15 @@ import { ScreenHeader } from '@/ui-components/ScreenHeader';
 import { Text } from '@/ui-components/Text';
 import { WhiskeyCard, type WhiskeyCardPill } from '@/ui-components/WhiskeyCard';
 
-const MAX_CARDS = 3;
-
-const candidatePills = (score: number, confident: boolean): WhiskeyCardPill[] =>
-  confident
+const candidatePills = (score: number | undefined, confident: boolean): WhiskeyCardPill[] => {
+  if (score === undefined) return [];
+  return confident
     ? [{ label: `${score}%`, tone: 'accent' }]
     : [
         { label: `${score}%`, tone: 'secondary' },
         { label: 'Best guess', tone: 'secondary' },
       ];
+};
 
 /** The chosen photo under the Scan Bottle header, its catalog match once found, and Retake to pick another. */
 export function ScanBottleView() {
@@ -25,6 +26,7 @@ export function ScanBottleView() {
   const { photoUri } = useLocalSearchParams<{ photoUri?: string }>();
   const openScanSheet = useScanSheet('scan');
   const match = useBottleMatch(photoUri);
+  const listed = match ? combineFindings(match.candidates, match.label.hits, match.confident) : null;
 
   return (
     <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-whiskey-bg">
@@ -40,15 +42,15 @@ export function ScanBottleView() {
         {photoUri && match ? (
           <>
             <Text testID="match-name" variant="display" className="text-center text-2xl">
-              {match.confident ? match.candidates[0].name : 'Not found'}
+              {listed?.showName ? listed.cards[0].name : 'Not found'}
             </Text>
-            {match.candidates.slice(0, MAX_CARDS).map(({ bottleId, name, category, score, cardImage }) => (
+            {listed?.cards.map(({ bottleId, name, category, score, cardImage }) => (
               <View key={bottleId} className="w-full">
                 <WhiskeyCard
                   name={name}
                   category={category}
                   image={cardImage}
-                  pills={candidatePills(score, match.confident)}
+                  pills={candidatePills(score, listed.confident)}
                 />
               </View>
             ))}

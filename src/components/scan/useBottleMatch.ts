@@ -6,16 +6,22 @@ import { type CatalogStore, openCatalogStore } from '@/lib/db/database';
 import { reseedIfModelChanged } from '@/lib/db/seedCatalog';
 import { embedPhoto, embedUprightPhoto, type PhotoEmbedding, uprightCopy } from '@/lib/embedding/embedPhoto';
 import { readLabelText } from '@/lib/embedding/readLabelText';
-import { labelQuery, labelTokens, matchedWords } from '@/lib/matching/labelText';
+import { closeSpellings, labelQuery, labelTokens, matchedWords } from '@/lib/matching/labelText';
 import { rankWhiskeys } from '@/lib/matching/rankWhiskeys';
 
 /** `score` is the similarity, 0–100; `cardImage` is the catalog card image asset id. */
 export type MatchCandidate = { bottleId: string; name: string; category: string; score: number; cardImage?: number };
 
 /** `words` are the label words found in that whiskey's name, producer, expression or age, in label order. */
-export type LabelHit = { bottleId: string; name: string; words: string[] };
+export type LabelHit = {
+  bottleId: string;
+  name: string;
+  words: string[];
+  category: string;
+  cardImage?: number;
+};
 
-/** What the label read found; evidence only, never part of the verdict. */
+/** What the label read found. Combined with the image ranking for the cards; the evidence section still shows it on its own. */
 export type LabelEvidence = {
   /** The best OCR reading of each text observation; empty when no label text was read. */
   lines: string[];
@@ -91,17 +97,18 @@ async function matchImage(uprightUri: string, deps: BottleMatchDeps): Promise<Im
 
 /** Never rejects: a failed search keeps the lines with no hits. */
 async function matchLabel(lines: string[], deps: BottleMatchDeps): Promise<LabelEvidence> {
-  const tokens = labelTokens(lines);
+  const whiskeys = catalogById(deps);
+  const fields = [...whiskeys.values()].flatMap(({ name, producer, expression, age }) => [name, producer, expression, age]);
+  const tokens = closeSpellings(labelTokens(lines), fields);
   if (tokens.length === 0) return { lines, hits: [] };
   try {
     const store = await deps.openStore();
     const bottleIds = await store.searchLabels(labelQuery(tokens));
-    const whiskeys = catalogById(deps);
     const hits = bottleIds.flatMap((bottleId) => {
       const whiskey = whiskeys.get(bottleId);
       if (!whiskey) return [];
-      const { name, producer, expression, age } = whiskey;
-      return [{ bottleId, name, words: matchedWords(tokens, [name, producer, expression, age]) }];
+      const { name, producer, expression, age, category, imageSource } = whiskey;
+      return [{ bottleId, name, category, cardImage: imageSource, words: matchedWords(tokens, [name, producer, expression, age]) }];
     });
     return { lines, hits };
   } catch {

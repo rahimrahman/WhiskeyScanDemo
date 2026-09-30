@@ -19,8 +19,8 @@ const MATCH: BottleMatch = {
   label: {
     lines: ['Eagle Rare', '10 Years'],
     hits: [
-      { bottleId: '7', name: 'Eagle Rare 10 Year', words: ['eagle', 'rare', '10'] },
-      { bottleId: '10', name: 'Laphroaig 10 Year Old', words: ['10'] },
+      { bottleId: '7', name: 'Eagle Rare 10 Year', words: ['eagle', 'rare', '10'], category: 'Bourbon' },
+      { bottleId: '10', name: 'Laphroaig 10 Year Old', words: ['10'], category: 'Scotch' },
     ],
   },
 };
