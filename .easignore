@@ -1,0 +1,48 @@
+# EAS uses this file instead of .gitignore.
+# assets/catalog/ is gitignored so photos stay out of git, and omitted here so a cloud build can bundle a catalog generated locally.
+# Temporary catalog build dirs stay ignored.
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# jest
+coverage/
+
+# temporary catalog build dirs
+assets/.catalog-build-*
+
+# generated native folders
+/ios
+/android
