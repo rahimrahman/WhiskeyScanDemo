@@ -11,6 +11,8 @@ const lastSymbolProps = () => jest.mocked(SymbolView).mock.lastCall?.[0];
 describe('Icon', () => {
   it.each([
     ['chevron.left', 'arrow_back_ios_new'],
+    ['chevron.down', 'keyboard_arrow_down'],
+    ['chevron.up', 'keyboard_arrow_up'],
     ['magnifyingglass', 'search'],
     ['xmark', 'close'],
     ['camera', 'photo_camera'],

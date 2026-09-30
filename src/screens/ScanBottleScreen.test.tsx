@@ -7,6 +7,7 @@ jest.mock('expo-router', () => ({
 }));
 jest.mock('react-native-vision-camera', () => ({ VisionCamera: {} }));
 jest.mock('expo-image-picker', () => ({}));
+jest.mock('@/components/scan/useBottleMatch', () => ({ useBottleMatch: () => null }));
 
 import ScanRoute from '@app/scan';
 import ScanBottleScreen from '@/screens/ScanBottleScreen';

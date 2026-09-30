@@ -8,11 +8,14 @@ jest.mock('react-native-vision-camera', () => ({
   VisionCamera: { cameraPermissionStatus: 'authorized', requestCameraPermission: jest.fn() },
 }));
 jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: jest.fn() }));
+jest.mock('@/components/scan/useBottleMatch', () => ({ useBottleMatch: jest.fn() }));
 
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams } from 'expo-router';
 
 import { ScanBottleView } from '@/components/scan/ScanBottleView';
+import { type BottleMatch, type MatchCandidate, useBottleMatch } from '@/components/scan/useBottleMatch';
+import { WhiskeyCard } from '@/ui-components/WhiskeyCard';
 
 const showActionSheet = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation(() => {});
 
@@ -37,28 +40,117 @@ const retakeAndChoose = async (index: number) => {
   await act(async () => onChoice(index));
 };
 
-beforeEach(() => jest.clearAllMocks());
+const thumbnailImage = () => screen.getByTestId('scan-thumbnail').findByType(Image);
+
+const candidate = (bottleId: string, score: number): MatchCandidate => ({
+  bottleId,
+  name: `Whiskey ${bottleId}`,
+  category: 'Bourbon',
+  score,
+  cardImage: Number(bottleId),
+});
+
+const match = (confident: boolean, candidates: MatchCandidate[]): BottleMatch => ({
+  confident,
+  candidates,
+  winningPhoto: candidates.length > 0 ? 101 : undefined,
+  elapsedMs: 412,
+  modelId: 'apple-vision-feature-print:float:768',
+});
+
+/** The label of every pill on each rendered card, category first. */
+const cardPills = () =>
+  screen.UNSAFE_getAllByType(WhiskeyCard).map((card) => [
+    card.props.category,
+    ...card.props.pills.map(({ label }: { label: string }) => label),
+  ]);
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  jest.mocked(useBottleMatch).mockReturnValue(null);
+});
 
 describe('ScanBottleView', () => {
   it('shows the header, the photo as a rounded thumbnail, and Retake', () => {
     renderScan({ photoUri: 'file:///tmp/a.jpg' });
 
     expect(screen.getByRole('header', { name: 'Scan Bottle' })).toBeTruthy();
-    const image = screen.UNSAFE_getByType(Image);
+    const image = thumbnailImage();
     expect(image.props.source).toEqual({ uri: 'file:///tmp/a.jpg' });
     expect(image.props.className).toContain('rounded-xl');
     expect(screen.getByRole('button', { name: 'Retake photo' })).toBeTruthy();
     expect(screen.queryByText('Retake photo')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Test match' })).toBeNull();
+    expect(useBottleMatch).toHaveBeenCalledWith('file:///tmp/a.jpg');
+  });
+
+  it('shows no match UI while the attempt is running', () => {
+    renderScan({ photoUri: 'file:///tmp/a.jpg' });
+
+    expect(screen.queryByTestId('match-name')).toBeNull();
+    expect(screen.UNSAFE_queryAllByType(WhiskeyCard)).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: 'How we found it' })).toBeNull();
+  });
+
+  it('names a confident match, shows up to 3 cards with accent percentages, and keeps How we found it collapsed', () => {
+    jest
+      .mocked(useBottleMatch)
+      .mockReturnValue(match(true, [candidate('1', 91), candidate('2', 70), candidate('3', 64), candidate('4', 50)]));
+
+    renderScan({ photoUri: 'file:///tmp/a.jpg' });
+
+    expect(screen.getByTestId('match-name')).toHaveTextContent('Whiskey 1');
+    expect(cardPills()).toEqual([
+      ['Bourbon', '91%'],
+      ['Bourbon', '70%'],
+      ['Bourbon', '64%'],
+    ]);
+    const cards = screen.UNSAFE_getAllByType(WhiskeyCard);
+    expect(cards.map((card) => card.props.image)).toEqual([1, 2, 3]);
+    expect(cards[0].props.pills).toEqual([{ label: '91%', tone: 'accent' }]);
+    expect(screen.queryByText('Best guess')).toBeNull();
+    expect(screen.getByRole('button', { name: 'How we found it' }).props.accessibilityState).toEqual({ expanded: false });
+    expect(screen.queryByTestId('match-evidence')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Retake photo' })).toBeTruthy();
+  });
+
+  it('says Not found and marks every card Best guess with a muted percentage', () => {
+    jest.mocked(useBottleMatch).mockReturnValue(match(false, [candidate('1', 80), candidate('2', 74)]));
+
+    renderScan({ photoUri: 'file:///tmp/a.jpg' });
+
+    expect(screen.getByTestId('match-name')).toHaveTextContent('Not found');
+    expect(cardPills()).toEqual([
+      ['Bourbon', '80%', 'Best guess'],
+      ['Bourbon', '74%', 'Best guess'],
+    ]);
+    expect(screen.UNSAFE_getAllByType(WhiskeyCard)[0].props.pills).toEqual([
+      { label: '80%', tone: 'secondary' },
+      { label: 'Best guess', tone: 'secondary' },
+    ]);
+  });
+
+  it('says Not found with no cards when nothing could be matched', () => {
+    jest.mocked(useBottleMatch).mockReturnValue(match(false, []));
+
+    renderScan({ photoUri: 'file:///tmp/a.jpg' });
+
+    expect(screen.getByTestId('match-name')).toHaveTextContent('Not found');
+    expect(screen.UNSAFE_queryAllByType(WhiskeyCard)).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'How we found it' })).toBeTruthy();
   });
 
   it('renders the header, Retake, and an empty thumbnail without a photoUri', () => {
+    jest.mocked(useBottleMatch).mockReturnValue(match(true, [candidate('1', 91)]));
+
     renderScan({});
 
     expect(screen.getByRole('header', { name: 'Scan Bottle' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Retake photo' })).toBeTruthy();
     expect(screen.getByTestId('scan-thumbnail').children).toHaveLength(0);
     expect(screen.UNSAFE_queryByType(Image)).toBeNull();
+    expect(screen.queryByTestId('match-name')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'How we found it' })).toBeNull();
   });
 
   it('goes back to Search from the header', () => {
@@ -77,7 +169,7 @@ describe('ScanBottleView', () => {
     expect(showActionSheet).toHaveBeenCalledTimes(1);
     expect(mockRouter.replace).not.toHaveBeenCalled();
     expect(mockRouter.push).not.toHaveBeenCalled();
-    expect(screen.UNSAFE_getByType(Image).props.source).toEqual({ uri: 'file:///tmp/a.jpg' });
+    expect(thumbnailImage().props.source).toEqual({ uri: 'file:///tmp/a.jpg' });
   });
 
   it('replaces itself with the new upload so Back still lands on Search', async () => {

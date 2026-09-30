@@ -5,11 +5,21 @@ jest.mock('expo-asset', () => ({ Asset: { fromModule: jest.fn() } }));
 
 import { Asset } from 'expo-asset';
 
-import { bundledPhotoUri } from './bundledPhotoUri';
+import { bundledPhotoSource, bundledPhotoUri } from './bundledPhotoUri';
 
 const downloadedAsset = (asset: { localUri: string | null; uri: string }) => {
   jest.mocked(Asset.fromModule).mockReturnValue({ downloadAsync: jest.fn().mockResolvedValue(asset) } as never);
 };
+
+describe('bundledPhotoSource', () => {
+  it('returns the asset id of a bundled photo', () => {
+    expect(bundledPhotoSource('photos/1/1-front.jpg')).toBe(101);
+  });
+
+  it('returns undefined for a photo path that is not in the image map', () => {
+    expect(bundledPhotoSource('photos/9/missing.jpg')).toBeUndefined();
+  });
+});
 
 describe('bundledPhotoUri', () => {
   it('downloads the bundled asset and returns its local file URI', async () => {
