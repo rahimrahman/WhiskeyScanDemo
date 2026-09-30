@@ -12,6 +12,7 @@ import {
   type SheetChoice,
   sheetChoice,
 } from '@/components/scan/scanFlow';
+import { cropScanPhoto } from '@/lib/embedding/cropScanPhoto';
 
 function showSheet(onChoice: (choice: SheetChoice) => void) {
   const { title, message, options, cancelButtonIndex } = SCAN_SHEET;
@@ -61,8 +62,8 @@ export function useScanSheet(origin: ScanOrigin) {
   };
 
   const uploadPicture = async () => {
-    const photoUri = await pickStill();
-    if (photoUri) go({ pathname: '/scan', params: { photoUri } });
+    const picked = await pickStill();
+    if (picked) go({ pathname: '/scan', params: { photoUri: await cropScanPhoto(picked) } });
   };
 
   return () =>

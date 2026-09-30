@@ -16,7 +16,7 @@ export function featurePrintModelId({ elementType, elementCount }: FeaturePrintR
  * Redraws the photo with its EXIF orientation applied and a long edge of at most `MAX_LONG_EDGE`.
  * Vision reads raw pixels and ignores the orientation tag, so camera photos would otherwise embed sideways.
  */
-async function uprightCopy(uri: string): Promise<string> {
+export async function uprightCopy(uri: string): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { Images }: typeof NitroImage = require('react-native-nitro-image');
   const image = await Images.loadFromFileAsync(uri.replace(/^file:\/\//, ''));

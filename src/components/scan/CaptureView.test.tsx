@@ -4,6 +4,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() };
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
+jest.mock('@/lib/embedding/cropScanPhoto', () => ({
+  cropScanPhoto: jest.fn((uri: string) => Promise.resolve(uri)),
+}));
 jest.mock('react-native-vision-camera', () => ({
   Camera: jest.fn(() => null),
   getCameraDevice: jest.fn(),
@@ -21,6 +24,7 @@ import {
 } from 'react-native-vision-camera';
 
 import { CaptureView } from '@/components/scan/CaptureView';
+import { cropScanPhoto } from '@/lib/embedding/cropScanPhoto';
 
 const backCamera = { id: 'back-wide' } as CameraDevice;
 const deviceFactory = {} as CameraDeviceFactory;
@@ -116,8 +120,22 @@ describe('CaptureView', () => {
 
     await pressShutter();
 
+    expect(cropScanPhoto).toHaveBeenCalledWith('file:///tmp/a.jpg');
     expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/scan', params: { photoUri: 'file:///tmp/a.jpg' } });
     expect(mockRouter.push).not.toHaveBeenCalled();
+  });
+
+  it('opens Scan Bottle on the cropped bottle photo', async () => {
+    capturePhotoToFile.mockResolvedValue({ filePath: '/tmp/a.jpg' });
+    jest.mocked(cropScanPhoto).mockResolvedValueOnce('file:///tmp/bottle.jpg');
+    await renderCapture();
+
+    await pressShutter();
+
+    expect(mockRouter.replace).toHaveBeenCalledWith({
+      pathname: '/scan',
+      params: { photoUri: 'file:///tmp/bottle.jpg' },
+    });
   });
 
   it('ignores shutter presses while a capture is in flight', async () => {

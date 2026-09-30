@@ -7,12 +7,16 @@ jest.mock('react-native-vision-camera', () => ({
   VisionCamera: { cameraPermissionStatus: 'authorized', requestCameraPermission: jest.fn() },
 }));
 jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: jest.fn() }));
+jest.mock('@/lib/embedding/cropScanPhoto', () => ({
+  cropScanPhoto: jest.fn((uri: string) => Promise.resolve(uri)),
+}));
 
 import * as ImagePicker from 'expo-image-picker';
 import { VisionCamera } from 'react-native-vision-camera';
 
 import type { ScanOrigin } from '@/components/scan/scanFlow';
 import { useScanSheet } from '@/components/scan/useScanSheet';
+import { cropScanPhoto } from '@/lib/embedding/cropScanPhoto';
 
 const launchLibrary = jest.mocked(ImagePicker.launchImageLibraryAsync);
 const requestCamera = jest.mocked(VisionCamera.requestCameraPermission);
@@ -116,11 +120,24 @@ describe('useScanSheet on iOS', () => {
 
     await chooseOnIOS('scan', 1);
 
+    expect(cropScanPhoto).toHaveBeenCalledWith('file:///library/b.jpg');
     expect(mockRouter.replace).toHaveBeenCalledWith({
       pathname: '/scan',
       params: { photoUri: 'file:///library/b.jpg' },
     });
     expect(mockRouter.push).not.toHaveBeenCalled();
+  });
+
+  it('opens Scan Bottle on the cropped upload', async () => {
+    launchLibrary.mockResolvedValue(picked('file:///library/b.jpg'));
+    jest.mocked(cropScanPhoto).mockResolvedValueOnce('file:///tmp/bottle.jpg');
+
+    await chooseOnIOS('search', 1);
+
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: '/scan',
+      params: { photoUri: 'file:///tmp/bottle.jpg' },
+    });
   });
 
   it('stays put when the library is canceled, empty, or fails', async () => {

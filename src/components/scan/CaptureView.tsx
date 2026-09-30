@@ -5,6 +5,7 @@ import { Camera, type CameraDevice, getCameraDevice, usePhotoOutput, VisionCamer
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { toImageUri } from '@/components/scan/scanFlow';
+import { cropScanPhoto } from '@/lib/embedding/cropScanPhoto';
 import { Icon } from '@/ui-components/Icon';
 import { Text } from '@/ui-components/Text';
 
@@ -40,7 +41,8 @@ export function CaptureView() {
     capturing.current = true;
     try {
       const { filePath } = await photoOutput.capturePhotoToFile({}, {});
-      router.replace({ pathname: '/scan', params: { photoUri: toImageUri(filePath) } });
+      const photoUri = await cropScanPhoto(toImageUri(filePath));
+      router.replace({ pathname: '/scan', params: { photoUri } });
     } catch {
       Alert.alert("Couldn't take the photo.");
     } finally {
