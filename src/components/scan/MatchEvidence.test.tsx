@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import { MatchEvidence } from '@/components/scan/MatchEvidence';
 import type { BottleMatch, MatchCandidate } from '@/components/scan/useBottleMatch';
@@ -16,7 +16,16 @@ const MATCH: BottleMatch = {
   winningPhoto: 101,
   elapsedMs: 412,
   modelId: 'apple-vision-feature-print:float:768',
+  label: {
+    lines: ['Eagle Rare', '10 Years'],
+    hits: [
+      { bottleId: '7', name: 'Eagle Rare 10 Year', words: ['eagle', 'rare', '10'] },
+      { bottleId: '10', name: 'Laphroaig 10 Year Old', words: ['10'] },
+    ],
+  },
 };
+
+const NO_LABEL = { lines: [], hits: [] };
 
 const openEvidence = () => fireEvent.press(screen.getByRole('button', { name: 'How we found it' }));
 
@@ -27,6 +36,48 @@ describe('MatchEvidence', () => {
     expect(screen.getByRole('button', { name: 'How we found it' }).props.accessibilityState).toEqual({ expanded: false });
     expect(screen.queryByTestId('match-evidence')).toBeNull();
     expect(screen.queryByText('412 ms')).toBeNull();
+    expect(screen.queryByText('Eagle Rare')).toBeNull();
+  });
+
+  it('lists the label lines, then each label-ranked whiskey with its matched words in accent, when opened', () => {
+    render(<MatchEvidence photoUri="file:///tmp/a.jpg" match={MATCH} />);
+
+    openEvidence();
+
+    const label = within(screen.getByTestId('label-evidence'));
+    expect(label.getByText('Eagle Rare')).toBeTruthy();
+    expect(label.getByText('10 Years')).toBeTruthy();
+    expect(label.getByText('Eagle Rare 10 Year')).toBeTruthy();
+    const words = label.getByText('eagle rare 10');
+    expect(words.props.className).toContain('text-whiskey-accent');
+    expect(label.getByText('Laphroaig 10 Year Old')).toBeTruthy();
+    expect(label.getByText('10').props.className).toContain('text-whiskey-accent');
+    expect(label.queryByText('No catalog words matched')).toBeNull();
+    expect(label.queryByText('No label text read')).toBeNull();
+  });
+
+  it('says No catalog words matched under the lines when no whiskey matched them', () => {
+    render(
+      <MatchEvidence photoUri="file:///tmp/a.jpg" match={{ ...MATCH, label: { lines: ['Straight Bourbon'], hits: [] } }} />,
+    );
+
+    openEvidence();
+
+    const label = within(screen.getByTestId('label-evidence'));
+    expect(label.getByText('Straight Bourbon')).toBeTruthy();
+    expect(label.getByText('No catalog words matched')).toBeTruthy();
+    expect(label.queryByText('No label text read')).toBeNull();
+  });
+
+  it('says No label text read when OCR read nothing, keeping the image scores', () => {
+    render(<MatchEvidence photoUri="file:///tmp/a.jpg" match={{ ...MATCH, label: NO_LABEL }} />);
+
+    openEvidence();
+
+    const label = within(screen.getByTestId('label-evidence'));
+    expect(label.getByText('No label text read')).toBeTruthy();
+    expect(label.queryByText('No catalog words matched')).toBeNull();
+    expect(screen.getByText('91%')).toBeTruthy();
   });
 
   it('shows the scan beside the winning catalog photo, the top 5 scores, latency and model id when opened', () => {
@@ -62,7 +113,12 @@ describe('MatchEvidence', () => {
   });
 
   it('shows only the scan and latency when nothing matched and the embed failed', () => {
-    render(<MatchEvidence photoUri="file:///tmp/a.jpg" match={{ confident: false, candidates: [], elapsedMs: 12 }} />);
+    render(
+      <MatchEvidence
+        photoUri="file:///tmp/a.jpg"
+        match={{ confident: false, candidates: [], elapsedMs: 12, label: NO_LABEL }}
+      />,
+    );
 
     openEvidence();
 

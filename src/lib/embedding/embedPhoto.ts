@@ -25,22 +25,31 @@ export async function uprightCopy(uri: string): Promise<string> {
   return `file://${await resized.saveToTemporaryFileAsync('jpg', 90)}`;
 }
 
+function assertIOS(caller: string): void {
+  if (Platform.OS !== 'ios') {
+    throw new Error(`${caller} requires iOS (running on ${Platform.OS}).`);
+  }
+}
+
+/** Embeds a photo that `uprightCopy` already redrew, so a scan resizes once for both the print and OCR. */
+export async function embedUprightPhoto(uprightUri: string): Promise<PhotoEmbedding> {
+  assertIOS('embedUprightPhoto');
+  // Importing the package resolves the native module at once, which throws off iOS and in Expo Go.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const vision: typeof AppleIntelligence = require('@insidepics/expo-apple-intelligence').default;
+  const print = await vision.generateFeaturePrint(uprightUri);
+  if (!print) {
+    throw new Error(`Vision returned no feature print for ${uprightUri}.`);
+  }
+  return { vector: print.data, modelId: featurePrintModelId(print) };
+}
+
 /** Embeds a photo (`file://` URI or plain path) with an Apple Vision feature print of its upright copy. */
 export async function embedPhoto(photoUri: string): Promise<PhotoEmbedding> {
-  if (Platform.OS !== 'ios') {
-    throw new Error(`embedPhoto requires iOS (running on ${Platform.OS}).`);
-  }
+  assertIOS('embedPhoto');
   const uri = photoUri.trim();
   if (!uri) {
     throw new Error('embedPhoto requires a photo URI.');
   }
-
-  // Importing the package resolves the native module at once, which throws off iOS and in Expo Go.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const vision: typeof AppleIntelligence = require('@insidepics/expo-apple-intelligence').default;
-  const print = await vision.generateFeaturePrint(await uprightCopy(uri));
-  if (!print) {
-    throw new Error(`Vision returned no feature print for ${uri}.`);
-  }
-  return { vector: print.data, modelId: featurePrintModelId(print) };
+  return embedUprightPhoto(await uprightCopy(uri));
 }

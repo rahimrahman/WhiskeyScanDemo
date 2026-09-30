@@ -1,14 +1,18 @@
 import type { CatalogWhiskey } from '@/lib/catalog/catalog';
 import type { PhotoEmbedding } from '@/lib/embedding/embedPhoto';
+import { matchedWords } from '@/lib/matching/labelText';
 
 import type { CatalogBottle, CatalogStore } from './database';
 import { reseedIfModelChanged, seedCatalog, type SeedDeps } from './seedCatalog';
 import { decodeVector } from './vectors';
 
+type LabelRow = { bottleId: string; fields: string[] };
+
 /** An in-memory `CatalogStore` with the same upsert and delete rules as the SQLite one. */
 function memoryStore() {
   const bottles = new Map<string, CatalogBottle>();
   const photos = new Map<string, { bottleId: string; embedding: Uint8Array | null }>();
+  let labels: LabelRow[] = [];
   let modelId: string | null = null;
 
   const store: CatalogStore = {
@@ -21,6 +25,10 @@ function memoryStore() {
       for (const imagePath of photos.keys()) if (!keepPhotos.has(imagePath)) photos.delete(imagePath);
       const keepBottles = new Set(nextBottles.map((bottle) => bottle.id));
       for (const id of bottles.keys()) if (!keepBottles.has(id)) bottles.delete(id);
+      labels = [...bottles.values()].map(({ id, name, producer, expression, age }) => ({
+        bottleId: id,
+        fields: [name, producer, expression, age],
+      }));
     },
     async photosMissingEmbedding() {
       return [...photos].filter(([, row]) => !row.embedding).map(([imagePath, { bottleId }]) => ({ bottleId, imagePath }));
@@ -39,6 +47,15 @@ function memoryStore() {
       return [...photos]
         .filter(([, row]) => row.embedding)
         .map(([imagePath, { bottleId, embedding }]) => ({ bottleId, imagePath, vector: decodeVector(embedding!) }));
+    },
+    async searchLabels(match) {
+      const tokens = [...match.matchAll(/"([^"]+)"/g)].map(([, token]) => token);
+      return labels
+        .map(({ bottleId, fields }) => ({ bottleId, hits: matchedWords(tokens, fields).length }))
+        .filter(({ hits }) => hits > 0)
+        .sort((a, b) => b.hits - a.hits)
+        .slice(0, 3)
+        .map(({ bottleId }) => bottleId);
     },
   };
   return { store, bottles, photos, modelId: () => modelId };
@@ -105,6 +122,17 @@ describe('seedCatalog', () => {
       note: 'Note 2',
       imagePath: 'photos/2/1.jpg',
     });
+  });
+
+  it("indexes each bottle's name, producer, expression and age for label search without touching vectors", async () => {
+    await seedCatalog(deps(), CATALOG);
+    const before = await db.store.loadPhotoVectors();
+
+    await seedCatalog(deps(), [{ ...whiskey('2', 3), name: 'Eagle Rare', age: '10 years' }]);
+
+    expect(await db.store.searchLabels('"eagle" OR "10"')).toEqual(['2']);
+    expect(await db.store.searchLabels('"producer"')).toEqual(['2']);
+    expect(await db.store.loadPhotoVectors()).toEqual(before.filter(({ bottleId }) => bottleId === '2'));
   });
 
   it('reuses stored vectors on a later launch without embedding', async () => {

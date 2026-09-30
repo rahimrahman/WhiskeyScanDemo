@@ -56,6 +56,7 @@ const match = (confident: boolean, candidates: MatchCandidate[]): BottleMatch =>
   winningPhoto: candidates.length > 0 ? 101 : undefined,
   elapsedMs: 412,
   modelId: 'apple-vision-feature-print:float:768',
+  label: { lines: ['Label line'], hits: [{ bottleId: '9', name: 'Label Whiskey', words: ['label'] }] },
 });
 
 /** The label of every pill on each rendered card, category first. */
@@ -111,7 +112,19 @@ describe('ScanBottleView', () => {
     expect(screen.queryByText('Best guess')).toBeNull();
     expect(screen.getByRole('button', { name: 'How we found it' }).props.accessibilityState).toEqual({ expanded: false });
     expect(screen.queryByTestId('match-evidence')).toBeNull();
+    expect(screen.queryByText('Label line')).toBeNull();
     expect(screen.getByRole('button', { name: 'Retake photo' })).toBeTruthy();
+  });
+
+  it('keeps the name line on the image match and lists a different label hit under How we found it', () => {
+    jest.mocked(useBottleMatch).mockReturnValue(match(true, [candidate('1', 91)]));
+
+    renderScan({ photoUri: 'file:///tmp/a.jpg' });
+    fireEvent.press(screen.getByRole('button', { name: 'How we found it' }));
+
+    expect(screen.getByTestId('match-name')).toHaveTextContent('Whiskey 1');
+    expect(screen.UNSAFE_getAllByType(WhiskeyCard).map((card) => card.props.name)).toEqual(['Whiskey 1']);
+    expect(screen.getByText('Label Whiskey')).toBeTruthy();
   });
 
   it('says Not found and marks every card Best guess with a muted percentage', () => {

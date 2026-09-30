@@ -19,7 +19,7 @@ export type CatalogPhoto = { bottleId: string; imagePath: string };
 export type PhotoVector = CatalogPhoto & { vector: Float32Array };
 
 export type CatalogStore = {
-  /** Upserts every bottle and photo, keeping stored vectors; bottles and photos not passed are deleted. */
+  /** Upserts every bottle and photo, keeping stored vectors; bottles and photos not passed are deleted. Refills `bottles_fts`. */
   syncCatalog(bottles: CatalogBottle[], photos: CatalogPhoto[]): Promise<void>;
   photosMissingEmbedding(): Promise<CatalogPhoto[]>;
   saveEmbedding(imagePath: string, embedding: Uint8Array): Promise<void>;
@@ -28,6 +28,8 @@ export type CatalogStore = {
   resetEmbeddings(modelId: string): Promise<void>;
   /** Every stored vector; empty until the first photo is embedded. */
   loadPhotoVectors(): Promise<PhotoVector[]>;
+  /** Up to 3 bottle ids whose name, producer, expression or age satisfy the FTS5 `match`, best first. */
+  searchLabels(match: string): Promise<string[]>;
 };
 
 const DATABASE_NAME = 'catalog.db';
@@ -55,6 +57,14 @@ CREATE TABLE IF NOT EXISTS bottle_photos (
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY NOT NULL,
   value TEXT NOT NULL
+);
+CREATE VIRTUAL TABLE IF NOT EXISTS bottles_fts USING fts5(
+  bottle_id UNINDEXED,
+  name,
+  producer,
+  expression,
+  age,
+  tokenize = "unicode61 tokenchars ''''"
 );
 `;
 
@@ -100,6 +110,11 @@ export function createCatalogStore(db: SQLiteDatabase): CatalogStore {
         await db.runAsync('DELETE FROM bottles WHERE id NOT IN (SELECT value FROM json_each(?))', [
           JSON.stringify(bottles.map((bottle) => bottle.id)),
         ]);
+        await db.runAsync('DELETE FROM bottles_fts');
+        await db.runAsync(
+          `INSERT INTO bottles_fts (bottle_id, name, producer, expression, age)
+           SELECT id, name, producer, expression, age FROM bottles`,
+        );
       });
     },
 
@@ -142,6 +157,14 @@ export function createCatalogStore(db: SQLiteDatabase): CatalogStore {
         imagePath,
         vector: decodeVector(embedding),
       }));
+    },
+
+    async searchLabels(match) {
+      const rows = await db.getAllAsync<{ bottleId: string }>(
+        'SELECT bottle_id AS bottleId FROM bottles_fts WHERE bottles_fts MATCH ? ORDER BY rank LIMIT 3',
+        [match],
+      );
+      return rows.map(({ bottleId }) => bottleId);
     },
   };
 }

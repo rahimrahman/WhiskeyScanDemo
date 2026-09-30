@@ -12,7 +12,7 @@ jest.mock('react-native-nitro-image', () => ({
 
 import { Platform } from 'react-native';
 
-import { embedPhoto } from './embedPhoto';
+import { embedPhoto, embedUprightPhoto } from './embedPhoto';
 
 const print = { data: [0.25, -1, 3.5], elementType: 'float', elementCount: 3 };
 
@@ -84,6 +84,24 @@ describe('embedPhoto', () => {
 
   it.each(['', '   '])('rejects an empty URI (%j) without calling Vision', async (uri) => {
     await expect(embedPhoto(uri)).rejects.toThrow(/requires a photo URI/);
+    expect(mockGenerateFeaturePrint).not.toHaveBeenCalled();
+  });
+
+  it('prints an already-upright URI without redrawing it again', async () => {
+    mockGenerateFeaturePrint.mockResolvedValue(print);
+
+    await expect(embedUprightPhoto('file:///tmp/scan-upright.jpg')).resolves.toEqual({
+      vector: [0.25, -1, 3.5],
+      modelId: 'apple-vision-feature-print:float:3',
+    });
+    expect(mockGenerateFeaturePrint).toHaveBeenCalledWith('file:///tmp/scan-upright.jpg');
+    expect(mockLoadFromFileAsync).not.toHaveBeenCalled();
+  });
+
+  it('rejects an already-upright URI off iOS without calling Vision', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+
+    await expect(embedUprightPhoto('file:///tmp/scan-upright.jpg')).rejects.toThrow(/requires iOS/);
     expect(mockGenerateFeaturePrint).not.toHaveBeenCalled();
   });
 

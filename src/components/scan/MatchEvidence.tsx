@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Image, Pressable, View } from 'react-native';
 
-import type { BottleMatch } from '@/components/scan/useBottleMatch';
+import type { BottleMatch, LabelEvidence } from '@/components/scan/useBottleMatch';
+import { cn } from '@/ui-components/cn';
 import { Icon } from '@/ui-components/Icon';
 import { Text } from '@/ui-components/Text';
 
@@ -9,16 +10,39 @@ const TOP_SCORES = 5;
 
 export type MatchEvidenceProps = { photoUri: string; match: BottleMatch };
 
-function Detail({ label, value }: { label: string; value: string }) {
+function Detail({ label, value, valueClassName }: { label: string; value: string; valueClassName?: string }) {
   return (
     <View className="flex-row justify-between gap-4">
       <Text className="text-sm text-whiskey-textSecondary">{label}</Text>
-      <Text className="flex-1 text-right text-sm">{value}</Text>
+      <Text className={cn('flex-1 text-right text-sm', valueClassName)}>{value}</Text>
     </View>
   );
 }
 
-/** Collapsed "How we found it": the scan beside the winning catalog photo, top scores, latency and model id. */
+/** The lines read off the label, then each label-ranked whiskey with its matched words in accent. */
+function LabelText({ label: { lines, hits } }: { label: LabelEvidence }) {
+  return (
+    <View testID="label-evidence" className="gap-2">
+      <Text variant="bodySemibold" className="text-sm">
+        Label text
+      </Text>
+      {lines.length === 0 ? <Text className="text-sm text-whiskey-textSecondary">No label text read</Text> : null}
+      {lines.map((line, index) => (
+        <Text key={index} className="text-sm">
+          {line}
+        </Text>
+      ))}
+      {lines.length > 0 && hits.length === 0 ? (
+        <Text className="text-sm text-whiskey-textSecondary">No catalog words matched</Text>
+      ) : null}
+      {hits.map(({ bottleId, name, words }) => (
+        <Detail key={bottleId} label={name} value={words.join(' ')} valueClassName="text-whiskey-accent" />
+      ))}
+    </View>
+  );
+}
+
+/** Collapsed "How we found it": the scan beside the winning catalog photo, top scores, label text, latency and model id. */
 export function MatchEvidence({ photoUri, match }: MatchEvidenceProps) {
   const [open, setOpen] = useState(false);
 
@@ -64,6 +88,7 @@ export function MatchEvidence({ photoUri, match }: MatchEvidenceProps) {
           {match.candidates.slice(0, TOP_SCORES).map(({ bottleId, name, score }) => (
             <Detail key={bottleId} label={name} value={`${score}%`} />
           ))}
+          <LabelText label={match.label} />
           <Detail label="Time" value={`${match.elapsedMs} ms`} />
           {match.modelId ? <Detail label="Model" value={match.modelId} /> : null}
         </View>
