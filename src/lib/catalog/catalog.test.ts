@@ -6,6 +6,7 @@ import {
   imageRequireMap,
   jpegSize,
   needsShrink,
+  parseCropReport,
   parseCsv,
   photoFileName,
   planCatalog,
@@ -113,6 +114,31 @@ describe('photoFileName', () => {
   });
 });
 
+describe('parseCropReport', () => {
+  it('keeps cropped, partial and split outputs per folder and drops flagged rows', () => {
+    const report = [
+      'bottle,source_file,output_files,status,box,note',
+      'A,1-front.jpg,1-front.jpg,cropped,"[1, 2, 3, 4]",',
+      'A,3-closeup.jpg,partial/3-closeup.jpg,partial,full,label close-up',
+      'A,4-lifestyle.jpg,flagged/4-lifestyle.jpg,flagged,,"ambiguous, blurred"',
+      'B,2-pair.jpg,2-pair_a.jpg;2-pair_b.jpg,split,"[1];[2]",two bottles',
+    ].join('\n');
+
+    expect(parseCropReport(report)).toEqual(
+      new Map([
+        ['A', ['1-front.jpg', 'partial/3-closeup.jpg']],
+        ['B', ['2-pair_a.jpg', '2-pair_b.jpg']],
+      ]),
+    );
+  });
+
+  it('names missing columns', () => {
+    expect(() => parseCropReport('bottle,status\nA,cropped\n')).toThrow(
+      'Crop report is missing columns: output_files',
+    );
+  });
+});
+
 describe('resolveSourceDir', () => {
   it('prefers the CLI folder over WHISKEY_PHOTOS_DIR', () => {
     expect(resolveSourceDir('/cli', '/env')).toBe('/cli');
@@ -216,6 +242,48 @@ describe('planCatalog', () => {
       'Whiskey 7: has 2 fields, expected 14',
       'CSV line 3: missing #',
       "Whiskey 3: photo3 has no usable file name: /photos/03 - Bourbon - Maker's Mark",
+    ]);
+  });
+
+  it('takes photos from the crop report, including partial/ and split files', () => {
+    const cropPhotos = new Map([
+      [lagavulin.folder, ['1-front.jpg', 'partial/3-label-closeup.jpg']],
+      [makersMark.folder, ['1-front_a.jpg', '1-front_b.jpg']],
+    ]);
+    const paths = new Set([
+      SOURCE,
+      ...[lagavulin, makersMark].map((row) => `${SOURCE}/${row.folder}`),
+      `${SOURCE}/${lagavulin.folder}/1-front.jpg`,
+      `${SOURCE}/${lagavulin.folder}/partial/3-label-closeup.jpg`,
+      `${SOURCE}/${makersMark.folder}/1-front_a.jpg`,
+      `${SOURCE}/${makersMark.folder}/1-front_b.jpg`,
+    ]);
+
+    const { catalog, photos } = planCatalog(toCsv([lagavulin, makersMark]), SOURCE, existsIn(paths), cropPhotos);
+
+    expect(catalog.whiskeys[0]).toMatchObject({
+      image: 'photos/9/1-front.jpg',
+      photos: ['photos/9/1-front.jpg', 'photos/9/partial/3-label-closeup.jpg'],
+    });
+    expect(catalog.whiskeys[1].photos).toEqual(['photos/3/1-front_a.jpg', 'photos/3/1-front_b.jpg']);
+    expect(photos[1]).toEqual({
+      id: '9',
+      source: '/photos/09 - Scotch – Islay - Lagavulin 16 Year Old/partial/3-label-closeup.jpg',
+      target: 'photos/9/partial/3-label-closeup.jpg',
+    });
+  });
+
+  it('fails when the crop report has no photos for a whiskey or names an unsafe path', () => {
+    const cropPhotos = new Map([[lagavulin.folder, ['../escape.jpg', 'a/b/c.jpg']]]);
+
+    expect(
+      planError(() =>
+        planCatalog(toCsv([lagavulin, makersMark]), SOURCE, existsIn(allPaths(rows)), cropPhotos),
+      ).problems,
+    ).toEqual([
+      'Whiskey 9: crop report entry has no usable file name: /photos/09 - Scotch – Islay - Lagavulin 16 Year Old',
+      'Whiskey 9: crop report entry has no usable file name: /photos/09 - Scotch – Islay - Lagavulin 16 Year Old',
+      "Whiskey 3: no photos in the crop report: /photos/03 - Bourbon - Maker's Mark",
     ]);
   });
 

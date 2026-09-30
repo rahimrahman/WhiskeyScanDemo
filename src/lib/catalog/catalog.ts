@@ -1,7 +1,10 @@
 export const MAX_LONG_EDGE = 1024;
 export const CSV_FILE_NAME = 'whiskey_bottles.csv';
+export const CROP_REPORT_FILE_NAME = 'crop_report.csv';
 
 const PHOTO_COLUMNS = ['photo1', 'photo2', 'photo3', 'photo4'] as const;
+const CROP_REPORT_COLUMNS = ['bottle', 'output_files', 'status'];
+const KEPT_CROP_STATUSES = new Set(['cropped', 'partial', 'split']);
 const REQUIRED_COLUMNS = [
   '#',
   'name',
@@ -92,6 +95,34 @@ export function photoFileName(cell: string): string {
   return cell.split('|')[0].trim();
 }
 
+/** Photo files per bottle folder from a crop report, in report order; `flagged` and unknown statuses are dropped. */
+export function parseCropReport(text: string): Map<string, string[]> {
+  const [header = [], ...rows] = parseCsv(text);
+  const missingColumns = CROP_REPORT_COLUMNS.filter((c) => !header.includes(c));
+  if (missingColumns.length > 0) {
+    throw new CatalogError([`Crop report is missing columns: ${missingColumns.join(', ')}`]);
+  }
+  const cell = (cells: string[], column: string) => (cells[header.indexOf(column)] ?? '').trim();
+  const photos = new Map<string, string[]>();
+  for (const cells of rows) {
+    if (!KEPT_CROP_STATUSES.has(cell(cells, 'status'))) continue;
+    const folder = cell(cells, 'bottle');
+    const files = cell(cells, 'output_files')
+      .split(';')
+      .map((file) => file.trim())
+      .filter(Boolean);
+    photos.set(folder, [...(photos.get(folder) ?? []), ...files]);
+  }
+  return photos;
+}
+
+/** A plain file name, or `<subfolder>/<file>` when `allowSubfolder`; never absolute or `..`. */
+function isUsableFileName(name: string, allowSubfolder: boolean): boolean {
+  const parts = name.split('/');
+  if (parts.length > (allowSubfolder ? 2 : 1)) return false;
+  return parts.every((part) => part !== '' && part !== '.' && part !== '..' && !part.includes('\\'));
+}
+
 export function resolveSourceDir(cliArg?: string, envDir?: string): string {
   const sourceDir = cliArg?.trim() || envDir?.trim();
   if (!sourceDir) {
@@ -116,11 +147,15 @@ export function sourceCsvPath(sourceDir: string, exists: PathExists): string {
   return csvPath;
 }
 
-/** Plans the whole catalog and checks every named folder and photo; throws one error listing every problem. */
+/**
+ * Plans the whole catalog and checks every named folder and photo; throws one error listing every problem.
+ * With `cropPhotos` (from `parseCropReport`), each folder's photos come from the report instead of photo1..photo4.
+ */
 export function planCatalog(
   csvText: string,
   sourceDir: string,
   exists: PathExists,
+  cropPhotos?: Map<string, string[]>,
 ): CatalogPlan {
   const [header = [], ...rows] = parseCsv(csvText);
   const missingColumns = REQUIRED_COLUMNS.filter((c) => !header.includes(c));
@@ -159,11 +194,18 @@ export function planCatalog(
       return;
     }
 
+    const entries = cropPhotos
+      ? (cropPhotos.get(cell('folder')) ?? []).map((fileName) => ({ source: 'crop report entry', fileName }))
+      : PHOTO_COLUMNS.map((column) => ({ source: column, fileName: photoFileName(cell(column)) }));
+    if (entries.length === 0) {
+      problems.push(`${label}: no photos in the crop report: ${folder}`);
+      return;
+    }
+
     const targets: string[] = [];
-    for (const column of PHOTO_COLUMNS) {
-      const fileName = photoFileName(cell(column));
-      if (!fileName || /[/\\]/.test(fileName) || fileName === '..') {
-        problems.push(`${label}: ${column} has no usable file name: ${folder}`);
+    for (const { source: entry, fileName } of entries) {
+      if (!isUsableFileName(fileName, Boolean(cropPhotos))) {
+        problems.push(`${label}: ${entry} has no usable file name: ${folder}`);
         continue;
       }
       const source = joinPath(folder, fileName);

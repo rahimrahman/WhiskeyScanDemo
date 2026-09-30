@@ -3,10 +3,12 @@ import path from 'path';
 import sharp from 'sharp';
 
 import {
+  CROP_REPORT_FILE_NAME,
   MAX_LONG_EDGE,
   imageRequireMap,
   jpegSize,
   needsShrink,
+  parseCropReport,
   planCatalog,
   resolveSourceDir,
   sourceCsvPath,
@@ -56,7 +58,11 @@ async function main() {
     resolveSourceDir(process.argv[2], process.env.WHISKEY_PHOTOS_DIR),
   );
   const csvPath = sourceCsvPath(sourceDir, existsSync);
-  const plan = planCatalog(await fs.readFile(csvPath, 'utf8'), sourceDir, existsSync);
+  const reportPath = path.join(sourceDir, CROP_REPORT_FILE_NAME);
+  const cropPhotos = existsSync(reportPath)
+    ? parseCropReport(await fs.readFile(reportPath, 'utf8'))
+    : undefined;
+  const plan = planCatalog(await fs.readFile(csvPath, 'utf8'), sourceDir, existsSync, cropPhotos);
 
   // Same filesystem as assets/catalog so the final rename is atomic.
   const buildDir = await fs.mkdtemp(path.join(assetsDir, '.catalog-build-'));
@@ -76,7 +82,8 @@ async function main() {
   }
 
   console.log(
-    `Wrote ${plan.catalog.whiskeys.length} whiskeys and ${plan.photos.length} photos to ${path.relative(appRoot, catalogDir)}/`,
+    `Wrote ${plan.catalog.whiskeys.length} whiskeys and ${plan.photos.length} photos to ${path.relative(appRoot, catalogDir)}/` +
+      (cropPhotos ? ` (photos from ${CROP_REPORT_FILE_NAME})` : ''),
   );
 }
 
