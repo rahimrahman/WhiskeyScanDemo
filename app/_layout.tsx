@@ -10,6 +10,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { useCatalogSeed } from '@/hooks/useCatalogSeed';
+
 // Splash calls reject when no native splash is showing (e.g. after a reload); nothing to recover.
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -17,6 +19,7 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({ EBGaramond_500Medium, Poppins_400Regular, Poppins_600SemiBold });
   // A font error falls back to system fonts rather than blocking the app.
   const ready = loaded || error != null;
+  useCatalogSeed(ready);
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync().catch(() => {});

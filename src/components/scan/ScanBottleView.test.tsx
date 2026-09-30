@@ -49,6 +49,7 @@ describe('ScanBottleView', () => {
     expect(image.props.className).toContain('rounded-xl');
     expect(screen.getByRole('button', { name: 'Retake photo' })).toBeTruthy();
     expect(screen.queryByText('Retake photo')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Test match' })).toBeNull();
   });
 
   it('renders the header, Retake, and an empty thumbnail without a photoUri', () => {

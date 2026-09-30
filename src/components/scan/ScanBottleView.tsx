@@ -2,7 +2,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { MatchDebugPanel } from '@/components/scan/MatchDebugPanel';
 import { useScanSheet } from '@/components/scan/useScanSheet';
 import { ScreenHeader } from '@/ui-components/ScreenHeader';
 import { Text } from '@/ui-components/Text';
@@ -23,7 +22,6 @@ export function ScanBottleView() {
             <Image source={{ uri: photoUri }} resizeMode="cover" className="h-full w-full rounded-xl" />
           ) : null}
         </View>
-        {photoUri ? <MatchDebugPanel photoUri={photoUri} /> : null}
       </ScrollView>
 
       <View className="mx-4 mb-4 h-12 items-center justify-center rounded-full border border-whiskey-accent">
