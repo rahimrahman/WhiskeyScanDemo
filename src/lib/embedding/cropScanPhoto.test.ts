@@ -76,6 +76,10 @@ describe('uprightTurn', () => {
     expect(uprightTurn(corners(0.5, 0.8, 0.5, 0.2))).toBeNull();
     expect(uprightTurn(null)).toBeNull();
   });
+
+  it('does not lay the bottle on its side when the rectangle top is a side edge', () => {
+    expect(uprightTurn(corners(0.8, 0.55, 0.2, 0.45))).toBeNull();
+  });
 });
 
 describe('labelRectangle', () => {
@@ -151,6 +155,23 @@ describe('cropScanPhoto', () => {
     expect(rotateAsync).toHaveBeenCalledWith(expect.closeTo((-Math.atan2(0.1, 0.6) * 180) / Math.PI), false);
     expect(mockDetectSaliency).toHaveBeenLastCalledWith('file:///tmp/turned.jpg');
     expect(secondCrop).toHaveBeenCalledWith(60, 736, 640, 1664);
+  });
+
+  it('does not rotate when the label rectangle would lay the bottle on its side', async () => {
+    const cropAsync = jest.fn().mockResolvedValue({
+      saveToTemporaryFileAsync: jest.fn().mockResolvedValue('/tmp/bottle.jpg'),
+    });
+    const rotateAsync = jest.fn();
+    mockDetectRectangles.mockResolvedValue([corners(0.8, 0.55, 0.2, 0.45)]);
+    mockDetectSaliency.mockResolvedValue({
+      objectnessRegions: [{ boundingBox: box, confidence: 0.8 }],
+      attentionRegions: [],
+    });
+    mockLoadFromFileAsync.mockResolvedValue({ width: 1000, height: 2000, cropAsync, rotateAsync });
+
+    await expect(cropScanPhoto('file:///tmp/scan.jpg')).resolves.toBe('file:///tmp/bottle.jpg');
+
+    expect(rotateAsync).not.toHaveBeenCalled();
   });
 
   it('keeps the upright photo when no bottle is found', async () => {

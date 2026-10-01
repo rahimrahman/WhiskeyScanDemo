@@ -10,7 +10,11 @@ describe('labelTokens', () => {
   });
 
   it('reads curly apostrophes as straight ones and splits on other punctuation', () => {
-    expect(labelTokens(['BLANTON\u2019S', 'Bottled-in-Bond, 100 Proof'])).toEqual(["blanton's", 'in', 'bond', '100']);
+    expect(labelTokens(['BLANTON\u2019S', 'Bottled-in-Bond, 100 Proof'])).toEqual(["blanton's", 'bond', '100']);
+  });
+
+  it('drops filler words that name a different bottle, such as in and from', () => {
+    expect(labelTokens(["Blanton's", 'stored in Warehouse', 'dumped from Barrel No 16'])).toEqual(["blanton's", 'stored', 'warehouse', 'dumped', '16']);
   });
 
   it('keeps each token once, in first-seen order', () => {

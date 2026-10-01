@@ -15,7 +15,8 @@ export type ListedMatch = {
 /**
  * Cards are the image matches and the label matches together.
  * A label hit the image also found moves to the front: above 70 when the image match is already confident,
- * and at any score when it is not. A shared whiskey is named. "Not found" is only for no shared whiskey and no confident image.
+ * and at any score when it is not. Shared hits are ordered by image score, so an 82% Blanton's beats a 70% bottle
+ * the label only caught on a stray word. A shared whiskey is named. "Not found" is only for no shared whiskey and no confident image.
  * A label-only whiskey is listed too, after the image matches that still fit.
  */
 export function combineFindings(
@@ -28,7 +29,9 @@ export function combineFindings(
     const found = imageById.get(hit.bottleId);
     return found ? [found] : [];
   });
-  const promoted = imageConfident ? agreed.filter((candidate) => candidate.score >= matchConfig.minSimilarity) : agreed;
+  const promoted = (imageConfident ? agreed.filter((candidate) => candidate.score >= matchConfig.minSimilarity) : agreed).sort(
+    (a, b) => b.score - a.score,
+  );
   const promotedIds = new Set(promoted.map((candidate) => candidate.bottleId));
   const textOnly: ListedMatch[] = hits
     .filter((hit) => !imageById.has(hit.bottleId))

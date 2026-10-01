@@ -66,6 +66,16 @@ describe('useScanSheet on iOS', () => {
     expect(alert).not.toHaveBeenCalled();
   });
 
+  it('opens capture from Retake without the sheet', async () => {
+    const { result } = renderHook(() => useScanSheet('scan', 'camera'));
+    act(() => result.current());
+    await flush();
+
+    expect(showActionSheet).not.toHaveBeenCalled();
+    expect(alert).not.toHaveBeenCalled();
+    expect(mockRouter.replace).toHaveBeenCalledWith('/capture');
+  });
+
   it('pushes capture from Search when the camera is authorized', async () => {
     await chooseOnIOS('search', 0);
 

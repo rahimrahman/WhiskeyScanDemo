@@ -13,6 +13,11 @@ const MIN_SIDE = 0.05;
 const PAD = 0.08;
 /** Tilts smaller than this are left alone. Nitro's positive degrees turn the image clockwise. */
 const MIN_TURN = 2;
+/**
+ * Steeper than this, the rectangle's "top" is a side of the label. Turning it would lay the bottle
+ * on its side after the camera orientation is already applied.
+ */
+const MAX_TURN = 35;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -38,8 +43,9 @@ export function labelRectangle(rectangles: RectangleObservation[] | null): Recta
 }
 
 /**
- * Clockwise degrees that stand the label upright. Vision's top edge stays the top,
- * so a tilted bottle is leveled without being flipped. Already-upright labels return null.
+ * Clockwise degrees that level a slightly tilted label. Vision's top edge stays the top,
+ * so the bottle is not flipped. Already-upright labels, and turns steep enough to lay the bottle
+ * on its side, return null.
  */
 export function uprightTurn(rect: RectangleObservation | null): number | null {
   if (!rect) return null;
@@ -51,7 +57,8 @@ export function uprightTurn(rect: RectangleObservation | null): number | null {
   const dy = topY - bottomY;
   if (!Number.isFinite(dx + dy) || dx * dx + dy * dy < 1e-8) return null;
   const turn = (-Math.atan2(dx, dy) * 180) / Math.PI;
-  return Math.abs(turn) < MIN_TURN ? null : turn;
+  if (Math.abs(turn) < MIN_TURN || Math.abs(turn) > MAX_TURN) return null;
+  return turn;
 }
 
 /**

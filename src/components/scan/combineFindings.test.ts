@@ -43,6 +43,19 @@ describe('combineFindings', () => {
     expect(confident).toBe(true);
   });
 
+  it('orders shared hits by image score when the image match is not confident', () => {
+    const { showName, confident, cards } = combineFindings(
+      [image('blanton', 82), image('caribou', 75), image('rittenhouse', 70)],
+      [hit('rittenhouse', 'Rittenhouse'), hit('blanton', "Blanton's")],
+      false,
+    );
+
+    expect(showName).toBe(true);
+    expect(confident).toBe(false);
+    expect(cards.map(({ bottleId }) => bottleId)).toEqual(['blanton', 'rittenhouse', 'caribou']);
+    expect(cards[0]).toMatchObject({ score: 82 });
+  });
+
   it('names the shared whiskey instead of Not found when the image match is not confident', () => {
     const { showName, confident, cards } = combineFindings(
       [image('1', 66), image('2', 60)],

@@ -30,19 +30,17 @@ const NO_LABEL = { lines: [], hits: [] };
 const openEvidence = () => fireEvent.press(screen.getByRole('button', { name: 'How we found it' }));
 
 describe('MatchEvidence', () => {
-  it('starts collapsed', () => {
+  it('starts expanded', () => {
     render(<MatchEvidence photoUri="file:///tmp/a.jpg" match={MATCH} />);
 
-    expect(screen.getByRole('button', { name: 'How we found it' }).props.accessibilityState).toEqual({ expanded: false });
-    expect(screen.queryByTestId('match-evidence')).toBeNull();
-    expect(screen.queryByText('412 ms')).toBeNull();
-    expect(screen.queryByText('Eagle Rare')).toBeNull();
+    expect(screen.getByRole('button', { name: 'How we found it' }).props.accessibilityState).toEqual({ expanded: true });
+    expect(screen.getByTestId('match-evidence')).toBeTruthy();
+    expect(screen.getByText('412 ms')).toBeTruthy();
+    expect(screen.getByText('Eagle Rare')).toBeTruthy();
   });
 
-  it('lists the label lines, then each label-ranked whiskey with its matched words in accent, when opened', () => {
+  it('lists the label lines, then each label-ranked whiskey with its matched words in accent', () => {
     render(<MatchEvidence photoUri="file:///tmp/a.jpg" match={MATCH} />);
-
-    openEvidence();
 
     const label = within(screen.getByTestId('label-evidence'));
     expect(label.getByText('Eagle Rare')).toBeTruthy();
@@ -61,8 +59,6 @@ describe('MatchEvidence', () => {
       <MatchEvidence photoUri="file:///tmp/a.jpg" match={{ ...MATCH, label: { lines: ['Straight Bourbon'], hits: [] } }} />,
     );
 
-    openEvidence();
-
     const label = within(screen.getByTestId('label-evidence'));
     expect(label.getByText('Straight Bourbon')).toBeTruthy();
     expect(label.getByText('No catalog words matched')).toBeTruthy();
@@ -72,18 +68,14 @@ describe('MatchEvidence', () => {
   it('says No label text read when OCR read nothing, keeping the image scores', () => {
     render(<MatchEvidence photoUri="file:///tmp/a.jpg" match={{ ...MATCH, label: NO_LABEL }} />);
 
-    openEvidence();
-
     const label = within(screen.getByTestId('label-evidence'));
     expect(label.getByText('No label text read')).toBeTruthy();
     expect(label.queryByText('No catalog words matched')).toBeNull();
     expect(screen.getByText('91%')).toBeTruthy();
   });
 
-  it('shows the scan beside the winning catalog photo, the top 5 scores, latency and model id when opened', () => {
+  it('shows the scan beside the winning catalog photo, the top 5 scores, latency and model id', () => {
     render(<MatchEvidence photoUri="file:///tmp/a.jpg" match={MATCH} />);
-
-    openEvidence();
 
     expect(screen.getByRole('button', { name: 'How we found it' }).props.accessibilityState).toEqual({ expanded: true });
     expect(screen.getByTestId('evidence-scan-photo').props.source).toEqual({ uri: 'file:///tmp/a.jpg' });
@@ -103,10 +95,9 @@ describe('MatchEvidence', () => {
     expect(screen.getByText('apple-vision-feature-print:float:768')).toBeTruthy();
   });
 
-  it('collapses again on a second tap', () => {
+  it('collapses on tap', () => {
     render(<MatchEvidence photoUri="file:///tmp/a.jpg" match={MATCH} />);
 
-    openEvidence();
     openEvidence();
 
     expect(screen.queryByTestId('match-evidence')).toBeNull();
@@ -119,8 +110,6 @@ describe('MatchEvidence', () => {
         match={{ confident: false, candidates: [], elapsedMs: 12, label: NO_LABEL }}
       />,
     );
-
-    openEvidence();
 
     expect(screen.getByTestId('evidence-scan-photo')).toBeTruthy();
     expect(screen.queryByTestId('evidence-catalog-photo')).toBeNull();

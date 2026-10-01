@@ -42,9 +42,9 @@ function LabelText({ label: { lines, hits } }: { label: LabelEvidence }) {
   );
 }
 
-/** Collapsed "How we found it": the scan beside the winning catalog photo, top scores, label text, latency and model id. */
+/** "How we found it", open for the demo: the scan beside the winning catalog photo, top scores, label text, latency and model id. */
 export function MatchEvidence({ photoUri, match }: MatchEvidenceProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
   return (
     <View className="w-full gap-3">

@@ -51,8 +51,11 @@ async function pickStill() {
   }
 }
 
-/** Opens the Scan bottle sheet: Take Photo goes to capture, Upload Picture straight to Scan Bottle. */
-export function useScanSheet(origin: ScanOrigin) {
+/**
+ * Search opens the Scan bottle sheet: Take Photo goes to capture, Upload Picture straight to Scan Bottle.
+ * Retake (`camera`) skips that sheet and opens capture.
+ */
+export function useScanSheet(origin: ScanOrigin, entry: 'sheet' | 'camera' = 'sheet') {
   const router = useRouter();
   const go = (href: Href) => (navigationFor(origin) === 'push' ? router.push(href) : router.replace(href));
 
@@ -66,9 +69,14 @@ export function useScanSheet(origin: ScanOrigin) {
     if (picked) go({ pathname: '/scan', params: { photoUri: await cropScanPhoto(picked) } });
   };
 
-  return () =>
+  return () => {
+    if (entry === 'camera') {
+      void takePhoto();
+      return;
+    }
     showSheet((choice) => {
       if (choice === 'camera') void takePhoto();
       if (choice === 'library') void uploadPicture();
     });
+  };
 }

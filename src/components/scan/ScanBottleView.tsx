@@ -24,7 +24,7 @@ const candidatePills = (score: number | undefined, confident: boolean): WhiskeyC
 export function ScanBottleView() {
   const router = useRouter();
   const { photoUri } = useLocalSearchParams<{ photoUri?: string }>();
-  const openScanSheet = useScanSheet('scan');
+  const retakePhoto = useScanSheet('scan', 'camera');
   const match = useBottleMatch(photoUri);
   const listed = match ? combineFindings(match.candidates, match.label.hits, match.confident) : null;
 
@@ -44,16 +44,16 @@ export function ScanBottleView() {
             <Text testID="match-name" variant="display" className="text-center text-2xl">
               {listed?.showName ? listed.cards[0].name : 'Not found'}
             </Text>
-            {listed?.cards.map(({ bottleId, name, category, score, cardImage }) => (
-              <View key={bottleId} className="w-full">
+            {listed?.cards[0] ? (
+              <View className="w-full">
                 <WhiskeyCard
-                  name={name}
-                  category={category}
-                  image={cardImage}
-                  pills={candidatePills(score, listed.confident)}
+                  name={listed.cards[0].name}
+                  category={listed.cards[0].category}
+                  image={listed.cards[0].cardImage}
+                  pills={candidatePills(listed.cards[0].score, listed.confident)}
                 />
               </View>
-            ))}
+            ) : null}
             <MatchEvidence photoUri={photoUri} match={match} />
           </>
         ) : null}
@@ -66,7 +66,7 @@ export function ScanBottleView() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Retake photo"
-          onPress={openScanSheet}
+          onPress={retakePhoto}
           className="absolute inset-0"
         />
       </View>

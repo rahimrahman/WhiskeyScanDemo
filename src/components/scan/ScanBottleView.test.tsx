@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { ActionSheetIOS, Image } from 'react-native';
+import { ActionSheetIOS, Alert, Image } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() };
@@ -10,14 +10,15 @@ jest.mock('react-native-vision-camera', () => ({
 jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: jest.fn() }));
 jest.mock('@/components/scan/useBottleMatch', () => ({ useBottleMatch: jest.fn() }));
 
-import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams } from 'expo-router';
+import { VisionCamera } from 'react-native-vision-camera';
 
 import { ScanBottleView } from '@/components/scan/ScanBottleView';
 import { type BottleMatch, type MatchCandidate, useBottleMatch } from '@/components/scan/useBottleMatch';
 import { WhiskeyCard } from '@/ui-components/WhiskeyCard';
 
 const showActionSheet = jest.spyOn(ActionSheetIOS, 'showActionSheetWithOptions').mockImplementation(() => {});
+const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 
 const metrics = {
   frame: { x: 0, y: 0, width: 390, height: 844 },
@@ -33,12 +34,10 @@ const renderScan = (params: { photoUri?: string }) => {
   );
 };
 
-/** Taps Retake, then the sheet button at `index`. */
-const retakeAndChoose = async (index: number) => {
-  fireEvent.press(screen.getByRole('button', { name: 'Retake photo' }));
-  const onChoice = showActionSheet.mock.calls.at(-1)![1];
-  await act(async () => onChoice(index));
-};
+const retake = () =>
+  act(async () => {
+    fireEvent.press(screen.getByRole('button', { name: 'Retake photo' }));
+  });
 
 const thumbnailImage = () => screen.getByTestId('scan-thumbnail').findByType(Image);
 
@@ -93,7 +92,7 @@ describe('ScanBottleView', () => {
     expect(screen.queryByRole('button', { name: 'How we found it' })).toBeNull();
   });
 
-  it('names a confident match, shows up to 3 cards with accent percentages, and keeps How we found it collapsed', () => {
+  it('names a confident match, shows only that card, and starts How we found it expanded', () => {
     jest
       .mocked(useBottleMatch)
       .mockReturnValue(match(true, [candidate('1', 91), candidate('2', 70), candidate('3', 64), candidate('4', 50)]));
@@ -101,22 +100,17 @@ describe('ScanBottleView', () => {
     renderScan({ photoUri: 'file:///tmp/a.jpg' });
 
     expect(screen.getByTestId('match-name')).toHaveTextContent('Whiskey 1');
-    expect(cardPills()).toEqual([
-      ['Bourbon', '91%'],
-      ['Bourbon', '70%'],
-      ['Bourbon', '64%'],
-    ]);
+    expect(cardPills()).toEqual([['Bourbon', '91%']]);
     const cards = screen.UNSAFE_getAllByType(WhiskeyCard);
-    expect(cards.map((card) => card.props.image)).toEqual([1, 2, 3]);
+    expect(cards.map((card) => card.props.image)).toEqual([1]);
     expect(cards[0].props.pills).toEqual([{ label: '91%', tone: 'accent' }]);
     expect(screen.queryByText('Best guess')).toBeNull();
-    expect(screen.getByRole('button', { name: 'How we found it' }).props.accessibilityState).toEqual({ expanded: false });
-    expect(screen.queryByTestId('match-evidence')).toBeNull();
-    expect(screen.queryByText('Label line')).toBeNull();
+    expect(screen.getByRole('button', { name: 'How we found it' }).props.accessibilityState).toEqual({ expanded: true });
+    expect(screen.getByTestId('match-evidence')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Retake photo' })).toBeTruthy();
   });
 
-  it('keeps the name on the image match and adds a label-only whiskey to the cards', () => {
+  it('keeps the first card on the image match and lists a label-only whiskey under How we found it', () => {
     jest.mocked(useBottleMatch).mockReturnValue({
       ...match(true, [candidate('1', 91), candidate('2', 80), candidate('3', 74)]),
       label: {
@@ -126,15 +120,10 @@ describe('ScanBottleView', () => {
     });
 
     renderScan({ photoUri: 'file:///tmp/a.jpg' });
-    fireEvent.press(screen.getByRole('button', { name: 'How we found it' }));
 
     expect(screen.getByTestId('match-name')).toHaveTextContent('Whiskey 1');
-    expect(screen.UNSAFE_getAllByType(WhiskeyCard).map((card) => card.props.name)).toEqual([
-      'Whiskey 1',
-      'Whiskey 2',
-      'Label Whiskey',
-    ]);
-    expect(screen.getAllByText('Label Whiskey').length).toBeGreaterThan(0);
+    expect(screen.UNSAFE_getAllByType(WhiskeyCard).map((card) => card.props.name)).toEqual(['Whiskey 1']);
+    expect(screen.getByText('Label Whiskey')).toBeTruthy();
   });
 
   it('moves a whiskey both methods found to the name line', () => {
@@ -149,7 +138,7 @@ describe('ScanBottleView', () => {
     renderScan({ photoUri: 'file:///tmp/a.jpg' });
 
     expect(screen.getByTestId('match-name')).toHaveTextContent('Whiskey 2');
-    expect(screen.UNSAFE_getAllByType(WhiskeyCard).map((card) => card.props.name)).toEqual(['Whiskey 2', 'Whiskey 1']);
+    expect(screen.UNSAFE_getAllByType(WhiskeyCard).map((card) => card.props.name)).toEqual(['Whiskey 2']);
   });
 
   it('names the whiskey both methods found instead of saying Not found', () => {
@@ -174,10 +163,7 @@ describe('ScanBottleView', () => {
     renderScan({ photoUri: 'file:///tmp/a.jpg' });
 
     expect(screen.getByTestId('match-name')).toHaveTextContent('Not found');
-    expect(cardPills()).toEqual([
-      ['Bourbon', '80%', 'Best guess'],
-      ['Bourbon', '74%', 'Best guess'],
-    ]);
+    expect(cardPills()).toEqual([['Bourbon', '80%', 'Best guess']]);
     expect(screen.UNSAFE_getAllByType(WhiskeyCard)[0].props.pills).toEqual([
       { label: '80%', tone: 'secondary' },
       { label: 'Best guess', tone: 'secondary' },
@@ -215,38 +201,27 @@ describe('ScanBottleView', () => {
     expect(mockRouter.back).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the photo when Retake is canceled', async () => {
+  it('opens the camera without the upload chooser', async () => {
     renderScan({ photoUri: 'file:///tmp/a.jpg' });
 
-    await retakeAndChoose(2);
+    await retake();
 
-    expect(showActionSheet).toHaveBeenCalledTimes(1);
-    expect(mockRouter.replace).not.toHaveBeenCalled();
-    expect(mockRouter.push).not.toHaveBeenCalled();
-    expect(thumbnailImage().props.source).toEqual({ uri: 'file:///tmp/a.jpg' });
-  });
-
-  it('replaces itself with the new upload so Back still lands on Search', async () => {
-    jest.mocked(ImagePicker.launchImageLibraryAsync).mockResolvedValue({
-      canceled: false,
-      assets: [{ uri: 'file:///library/b.jpg', width: 1, height: 1 }],
-    });
-    renderScan({ photoUri: 'file:///tmp/a.jpg' });
-
-    await retakeAndChoose(1);
-
-    expect(mockRouter.replace).toHaveBeenCalledWith({
-      pathname: '/scan',
-      params: { photoUri: 'file:///library/b.jpg' },
-    });
-    expect(mockRouter.push).not.toHaveBeenCalled();
-  });
-
-  it('replaces itself with capture on Take Photo', async () => {
-    renderScan({ photoUri: 'file:///tmp/a.jpg' });
-
-    await retakeAndChoose(0);
-
+    expect(showActionSheet).not.toHaveBeenCalled();
+    expect(alert).not.toHaveBeenCalled();
     expect(mockRouter.replace).toHaveBeenCalledWith('/capture');
+    expect(mockRouter.push).not.toHaveBeenCalled();
+  });
+
+  it('keeps the photo when the camera is unavailable', async () => {
+    const status = jest.replaceProperty(VisionCamera, 'cameraPermissionStatus', 'denied');
+    renderScan({ photoUri: 'file:///tmp/a.jpg' });
+
+    await retake();
+
+    expect(showActionSheet).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith('Camera access is off', 'Upload a picture instead.');
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+    expect(thumbnailImage().props.source).toEqual({ uri: 'file:///tmp/a.jpg' });
+    status.restore();
   });
 });
