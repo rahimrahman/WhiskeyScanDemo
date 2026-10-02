@@ -1,12 +1,12 @@
-# Whiskey Social
+# Whiskey Scan Demo
 
 Scan a bottle on an iPhone. The app matches the photo against a catalog that lives on the phone, offline, and shows how it decided.
 
-<!-- 60-second demo recording is not in the repo yet.
-     Save it as docs/demo.gif, then replace this note with:
-     ![Scan a bottle and see the nearest catalog match](docs/demo.gif) -->
+**Demo:** a screen recording of Search, then four photos, then each Scan Bottle result. The photos are catalog images on a monitor, not a bottle in hand.
 
-**Demo:** a 60-second GIF goes at `docs/demo.gif`. It is not recorded yet.
+The image match compares the photo with the catalog pictures. It does not read the brand name. **Best guess** means the top score is under 70%, or less than 8 points ahead of the next whiskey (`src/lib/matching/config.ts`). The name on that card can still be the right bottle.
+
+In the recording, Laphroaig 10, Johnnie Walker Black Label, and Blanton's are named correctly. Laphroaig and Blanton's stay Best guess because of that gate. Maker's Mark 2025 is a different expression from the catalog's Maker's Mark, so the image match ranks Rittenhouse Rye first. How we found it still reads "Maker's Mark" off the label. That label ranking does not change the image result.
 
 ## How a scan works
 

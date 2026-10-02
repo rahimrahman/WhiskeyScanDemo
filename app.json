@@ -1,24 +1,24 @@
 {
   "expo": {
-    "name": "Whiskey Social",
-    "slug": "whiskey-social",
+    "name": "Whiskey Scan Demo",
+    "slug": "whiskey-scan-demo",
     "version": "1.0.0",
     "platforms": ["ios", "android"],
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "whiskey-social",
+    "scheme": "whiskey-scan-demo",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#1A2334",
     "newArchEnabled": true,
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "app.whiskeysocial.demo",
+      "bundleIdentifier": "app.whiskeyscandemo",
       "infoPlist": {
         "NSCameraUsageDescription": "$(PRODUCT_NAME) uses the camera to photograph a bottle label."
       }
     },
     "android": {
-      "package": "app.whiskeysocial.demo",
+      "package": "app.whiskeyscandemo",
       "permissions": ["android.permission.CAMERA"],
       "adaptiveIcon": {
         "backgroundColor": "#1A2334",

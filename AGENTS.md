@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Whiskey Social demo: an Expo (React Native) app for iOS and Android, run with a development build (`expo-dev-client`). There is no web target.
+Whiskey Scan Demo: an Expo (React Native) app for iOS and Android, run with a development build (`expo-dev-client`). There is no web target.
 
 ## Scripts
 
