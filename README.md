@@ -1,8 +1,10 @@
 # Whiskey Scan Demo
 
+https://github.com/user-attachments/assets/158181e8-5aa4-46fe-8023-1dbed098efd9
+
 Scan a bottle on an iPhone. The app matches the photo against a catalog that lives on the phone, offline, and shows how it decided.
 
-**Demo:** a screen recording of Search, then four photos, then each Scan Bottle result. The photos are catalog images on a monitor, not a bottle in hand.
+The recording starts on Search, photographs four catalog images on a monitor, and shows each Scan Bottle result.
 
 The image match compares the photo with the catalog pictures. It does not read the brand name. **Best guess** means the top score is under 70%, or less than 8 points ahead of the next whiskey (`src/lib/matching/config.ts`). The name on that card can still be the right bottle.
 
